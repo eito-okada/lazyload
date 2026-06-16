@@ -5,10 +5,15 @@ import type { Task } from '../types/Task';
 // the real endpoint locally, or keep the mock on while iterating on the UI.
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
+// Spread across states (overdue / today / upcoming / no-date) so the schedule
+// UI can be developed against realistic data via VITE_USE_MOCK=true.
 const mockTasks: Task[] = [
-  { id: '1', title: 'Physics Homework #7', dueDate: '2026-06-17', startTime: '16:00', subject: 'Physics', estimatedMinutes: 45, priority: 'high' },
-  { id: '2', title: 'History Essay', dueDate: '2026-06-24', subject: 'History', estimatedMinutes: 120, priority: 'medium' },
-  { id: '3', title: 'Chemistry Lab Report', dueDate: '2026-06-20', subject: 'Chemistry', estimatedMinutes: 90, priority: 'low' },
+  { id: '1', title: 'Spanish vocab quiz', dueDate: '2026-06-14', startTime: '08:00', subject: 'Spanish 3', priority: 'high' },
+  { id: '2', title: 'Physics Homework #7', dueDate: '2026-06-16', startTime: '22:00', subject: 'AP Physics', estimatedMinutes: 45, priority: 'high' },
+  { id: '3', title: 'Read Chapter 12', dueDate: '2026-06-17', subject: 'English', estimatedMinutes: 60, priority: 'low' },
+  { id: '4', title: 'Chemistry Lab Report', dueDate: '2026-06-20', startTime: '23:59', subject: 'Chemistry', estimatedMinutes: 90, priority: 'medium' },
+  { id: '5', title: 'History Essay', dueDate: '2026-06-24', startTime: '22:00', subject: 'US History', estimatedMinutes: 120, priority: 'medium' },
+  { id: '6', title: 'Study for SAT', subject: 'Test Prep', priority: 'low' },
 ];
 
 function fileToBase64(file: File): Promise<string> {

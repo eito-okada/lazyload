@@ -174,38 +174,6 @@
   color: var(--accent);
 }
 
-.schedule-list {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.schedule-item {
-  display: flex;
-  gap: 16px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-}
-
-.schedule-time {
-  flex: 0 0 90px;
-  font-weight: 600;
-  color: var(--accent);
-}
-
-.schedule-task h3 {
-  margin: 0 0 2px;
-  font-size: 16px;
-  color: var(--text-h);
-}
-
-.schedule-task p {
-  font-size: 13px;
-  color: var(--text);
-}
-
 .upload-error {
   color: #dc2626;
   font-size: 14px;
@@ -237,28 +205,447 @@
   padding: 6px 8px;
 }
 
-.calendar-wrap {
-  width: 100%;
-  text-align: left;
-  background: var(--bg);
-  color: var(--text-h);
-}
-
 .cta-button svg {
   vertical-align: middle;
   margin-right: 6px;
 }
 
-.unscheduled {
+/* ---------- Schedule page ---------- */
+
+:root {
+  --prio-high: #ef4444;
+  --prio-medium: #f59e0b;
+  --prio-low: #10b981;
+  --prio-high-soft: rgba(239, 68, 68, 0.12);
+  --prio-medium-soft: rgba(245, 158, 11, 0.14);
+  --prio-low-soft: rgba(16, 185, 129, 0.14);
+  --overdue: #dc2626;
+  --overdue-soft: rgba(220, 38, 38, 0.08);
+  --card: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --prio-high: #f87171;
+    --prio-medium: #fbbf24;
+    --prio-low: #34d399;
+    --card: #1c1d25;
+  }
+}
+
+.schedule-page {
+  max-width: 760px;
+  align-items: stretch;
+}
+
+.schedule-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.schedule-header h1 {
+  margin: 8px 0 0;
+}
+
+.schedule-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
+  flex-wrap: wrap;
+}
+
+.view-toggle {
+  display: inline-flex;
+  background: var(--code-bg);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.view-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.view-toggle button.active {
+  background: var(--card);
+  color: var(--text-h);
+  box-shadow: var(--shadow);
+}
+
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-h);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.export-button:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow);
+}
+
+.export-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.schedule-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: var(--text);
+  padding: 56px 20px;
+}
+
+/* ---- Upcoming (agenda) ---- */
+
+.upcoming {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 24px;
   text-align: left;
 }
 
-.unscheduled h2 {
-  font-size: 16px;
+.day-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.unscheduled ul {
+.day-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 2px 2px;
+}
+
+.day-heading .day-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.day-heading .day-date {
+  font-size: 13px;
   color: var(--text);
-  padding-left: 20px;
+}
+
+.day-heading.today .day-label {
+  color: var(--accent);
+}
+
+.day-heading.overdue .day-label {
+  color: var(--overdue);
+}
+
+.day-heading.muted .day-label {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.day-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-row {
+  display: flex;
+  align-items: stretch;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+}
+
+.task-row:hover {
+  box-shadow: var(--shadow);
+  border-color: var(--accent-border);
+  transform: translateY(-1px);
+}
+
+.prio-bar {
+  flex: 0 0 4px;
+}
+
+.prio-bar.prio-high {
+  background: var(--prio-high);
+}
+.prio-bar.prio-medium {
+  background: var(--prio-medium);
+}
+.prio-bar.prio-low {
+  background: var(--prio-low);
+}
+
+.task-row-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 16px;
+  min-width: 0;
+}
+
+.task-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.task-row-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.task-chip {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-bg);
+  padding: 2px 9px;
+  border-radius: 20px;
+}
+
+.task-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.task-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text);
+}
+
+.task-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 20px;
+}
+
+.badge-overdue {
+  color: var(--overdue);
+  background: var(--overdue-soft);
+}
+.badge-soon {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+.badge-later {
+  color: var(--text);
+  background: var(--code-bg);
+}
+
+.prio-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 20px;
+  margin-left: auto;
+}
+
+.prio-tag.prio-high {
+  color: var(--prio-high);
+  background: var(--prio-high-soft);
+}
+.prio-tag.prio-medium {
+  color: var(--prio-medium);
+  background: var(--prio-medium-soft);
+}
+.prio-tag.prio-low {
+  color: var(--prio-low);
+  background: var(--prio-low-soft);
+}
+
+/* ---- Month grid ---- */
+
+.month {
+  margin-top: 24px;
+}
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.month-nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-h);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.month-nav button:hover {
+  border-color: var(--accent-border);
+}
+
+.month-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-h);
+  min-width: 170px;
+  text-align: center;
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.month-weekday {
+  background: var(--code-bg);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+  padding: 8px 0;
+}
+
+.month-cell {
+  background: var(--card);
+  min-height: 92px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.month-cell.outside {
+  background: var(--code-bg);
+}
+
+.month-cell.outside .month-cell-num {
+  color: var(--text);
+  opacity: 0.45;
+}
+
+.month-cell-num {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-h);
+  align-self: flex-start;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.month-cell.today .month-cell-num {
+  background: var(--accent);
+  color: #fff;
+}
+
+.month-cell-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.month-pill {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 3px solid;
+}
+
+.month-pill.prio-high {
+  background: var(--prio-high-soft);
+  border-color: var(--prio-high);
+  color: var(--text-h);
+}
+.month-pill.prio-medium {
+  background: var(--prio-medium-soft);
+  border-color: var(--prio-medium);
+  color: var(--text-h);
+}
+.month-pill.prio-low {
+  background: var(--prio-low-soft);
+  border-color: var(--prio-low);
+  color: var(--text-h);
+}
+
+.month-more {
+  font-size: 11px;
+  color: var(--text);
+  padding: 0 7px;
+}
+
+.month-unscheduled {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text);
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .month-cell {
+    min-height: 70px;
+  }
+  .month-pill {
+    font-size: 10px;
+  }
+  .prio-tag {
+    display: none;
+  }
 }
