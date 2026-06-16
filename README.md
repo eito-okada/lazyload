@@ -1,73 +1,79 @@
-# React + TypeScript + Vite
+# LazyLoad
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Turn a screenshot of your homework into an editable task list and a calendar.
+Upload a screenshot (Canvas, Google Classroom, WebAssign, a worksheet, anything),
+Gemini extracts the assignments, you review/fix them, and LazyLoad builds a
+schedule you can export to your calendar.
 
-Currently, two official plugins are available:
+Stack: Vite + React + TypeScript, with a serverless function that calls the
+Gemini API (vision + structured outputs).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Setup
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+npm install
+cp .env.example .env   # then add your GEMINI_API_KEY
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Get a key at [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) — Gemini 3.5 Flash has a free tier (rate-limited), which is what this defaults to. No payment method required to get started, unlike Claude.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Environment variables (see [.env.example](.env.example)):
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Var | Where | Purpose |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | backend | Your Gemini API key. Never commit it. |
+| `EXTRACT_MODEL` | backend | Override the extraction model. Defaults to `gemini-3.5-flash` (free tier). Bump to a paid/Pro model for accuracy. |
+| `VITE_USE_MOCK` | frontend | `true` uses built-in mock tasks instead of calling the API — develop the UI without spending tokens. |
+
+## Testing extraction (fastest feedback)
+
+Run the real extraction against a screenshot file — no Vercel or browser needed.
+This is the quickest way to check whether the model reads your screenshots
+correctly:
+
+```sh
+npm run extract -- path/to/screenshot.png
+
+# try a different model on the same screenshot (check ai.google.dev/gemini-api/docs/models for current IDs):
+EXTRACT_MODEL=gemini-3.1-pro-preview npm run extract -- path/to/screenshot.png
+```
+
+It prints the extracted tasks as JSON plus the model used and elapsed time.
+Reads `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) from your environment or `.env`.
+
+## Running the app
+
+```sh
+# UI only, with mock data (no API calls):
+VITE_USE_MOCK=true npm run dev          # http://localhost:5173
+
+# Full app including the real /api/extract function:
+npm i -g vercel
+vercel dev
+```
+
+Note: the plain Vite dev server (`npm run dev`) does **not** execute the
+`/api` serverless function — use `vercel dev` to exercise real extraction in
+the browser, or the `npm run extract` CLI above.
+
+## Project layout
+
+```
+api/
+  extract.ts          serverless HTTP handler (thin wrapper)
+  _extract-core.ts    shared Gemini extraction logic (vision + structured output)
+scripts/
+  extract.ts          local CLI tester (reuses _extract-core)
+src/
+  pages/              Home, Upload, Review, Schedule
+  components/         Navbar, UploadBox, TaskCard
+  context/            TaskContext (shares tasks across pages)
+  services/api.ts     calls /api/extract (or mock when VITE_USE_MOCK=true)
+  types/Task.ts       calendar-ready task shape
+```
+
+## Build
+
+```sh
+npm run build
 ```
