@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   format,
   isToday,
@@ -19,11 +19,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  RefreshCw,
+  X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTasks } from '../context/TaskContext';
+import { syncNow } from '../services/googleSync';
 import type { Task } from '../types/Task';
 import ItemRow from '../components/TaskRow';
+import ItemDetail from '../components/ItemDetail';
 import {
   DEFAULT_DURATION_MIN,
   dayKey,
@@ -41,10 +45,30 @@ function toDateArray(d: Date): DateArray {
   return [d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes()];
 }
 
+/** An item the user clicked, with the occurrence instants for display. */
+interface OpenItem {
+  item: Task;
+  date?: Date | null;
+  end?: Date | null;
+}
+
 export default function Schedule() {
   const { allTasks, updateTask, deleteTask } = useTasks();
   const [view, setView] = useState<'upcoming' | 'month'>('upcoming');
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [selected, setSelected] = useState<OpenItem | null>(null);
+  const [expandedDay, setExpandedDay] = useState<{ date: Date; items: ScheduledItem[] } | null>(null);
+
+  const openItem = (item: Task, date?: Date | null, end?: Date | null) =>
+    setSelected({ item, date, end });
+
+  // From the day-overflow modal: replace it with the item's detail view.
+  const openItemFromDay = (item: Task, date?: Date | null, end?: Date | null) => {
+    setExpandedDay(null);
+    setSelected({ item, date, end });
+  };
 
   // Wide window so overdue items and a few months of recurring events show in the agenda.
   const upcoming = useMemo<ScheduledItem[]>(() => {
@@ -102,6 +126,26 @@ export default function Schedule() {
     URL.revokeObjectURL(url);
   }
 
+  async function handleGoogleSync() {
+    setSyncing(true);
+    setSyncMessage(null);
+    try {
+      const r = await syncNow();
+      setSyncMessage(
+        `Synced to Google — ${r.created} added, ${r.updated} updated, ${r.deleted} removed.`,
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Sync failed.';
+      setSyncMessage(
+        message === 'Google Calendar not connected'
+          ? 'Google Calendar not connected — connect it in Settings.'
+          : message,
+      );
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   if (allTasks.length === 0) {
     return (
       <section className="page schedule-page">
@@ -145,10 +189,19 @@ export default function Schedule() {
               <Plus size={16} /> Add
             </Link>
             <button type="button" className="export-button" onClick={handleExport}>
-              <CalendarPlus size={16} /> Add to Calendar
+              <CalendarPlus size={16} /> Add to iCalendar
+            </button>
+            <button
+              type="button"
+              className="export-button"
+              onClick={handleGoogleSync}
+              disabled={syncing}
+            >
+              <RefreshCw size={16} /> {syncing ? 'Syncing…' : 'Sync to Google Calendar'}
             </button>
           </div>
         </div>
+        {syncMessage && <p className="schedule-sync-message">{syncMessage}</p>}
       </div>
 
       {view === 'upcoming' ? (
@@ -157,6 +210,7 @@ export default function Schedule() {
           unscheduled={unscheduled}
           onToggleDone={toggleDone}
           onDelete={deleteTask}
+          onOpen={openItem}
         />
       ) : (
         <MonthView
@@ -164,6 +218,31 @@ export default function Schedule() {
           month={month}
           onMonthChange={setMonth}
           unscheduled={unscheduled}
+          onOpen={openItem}
+          onExpandDay={(date, items) => setExpandedDay({ date, items })}
+        />
+      )}
+
+      {expandedDay && (
+        <DayModal
+          date={expandedDay.date}
+          items={expandedDay.items}
+          onClose={() => setExpandedDay(null)}
+          onOpen={openItemFromDay}
+          onToggleDone={toggleDone}
+          onDelete={deleteTask}
+        />
+      )}
+
+      {selected && (
+        <ItemDetail
+          item={selected.item}
+          date={selected.date}
+          end={selected.end}
+          onClose={() => setSelected(null)}
+          onUpdate={updateTask}
+          onDelete={deleteTask}
+          onToggleDone={toggleDone}
         />
       )}
     </section>
@@ -175,11 +254,13 @@ function UpcomingView({
   unscheduled,
   onToggleDone,
   onDelete,
+  onOpen,
 }: {
   dated: ScheduledItem[];
   unscheduled: Task[];
   onToggleDone: (task: Task) => void;
   onDelete: (taskId: string) => void;
+  onOpen: (item: Task, date?: Date | null, end?: Date | null) => void;
 }) {
   const groups = useMemo(() => {
     const map = new Map<string, ScheduledItem[]>();
@@ -211,6 +292,7 @@ function UpcomingView({
                   end={occ.end}
                   onToggleDone={onToggleDone}
                   onDelete={onDelete}
+                  onOpen={onOpen}
                 />
               ))}
             </div>
@@ -225,7 +307,13 @@ function UpcomingView({
           </div>
           <div className="day-tasks">
             {unscheduled.map((task) => (
-              <ItemRow key={task.id} item={task} onToggleDone={onToggleDone} onDelete={onDelete} />
+              <ItemRow
+                key={task.id}
+                item={task}
+                onToggleDone={onToggleDone}
+                onDelete={onDelete}
+                onOpen={onOpen}
+              />
             ))}
           </div>
         </div>
@@ -239,11 +327,15 @@ function MonthView({
   month,
   onMonthChange,
   unscheduled,
+  onOpen,
+  onExpandDay,
 }: {
   items: Task[];
   month: Date;
   onMonthChange: (d: Date) => void;
   unscheduled: Task[];
+  onOpen: (item: Task, date?: Date | null, end?: Date | null) => void;
+  onExpandDay: (date: Date, items: ScheduledItem[]) => void;
 }) {
   const days = useMemo(
     () =>
@@ -299,15 +391,25 @@ function MonthView({
               <span className="month-cell-num">{format(day, 'd')}</span>
               <div className="month-cell-tasks">
                 {dayItems.slice(0, 3).map((occ) => (
-                  <span
+                  <button
+                    type="button"
                     key={occ.occurrenceKey}
                     className={`month-pill ${occ.kind === 'event' ? 'prio-event' : `prio-${occ.item.priority ?? 'medium'}`}`}
                     title={occ.item.title}
+                    onClick={() => onOpen(occ.item, occ.date, occ.end)}
                   >
                     {occ.item.title}
-                  </span>
+                  </button>
                 ))}
-                {dayItems.length > 3 && <span className="month-more">+{dayItems.length - 3} more</span>}
+                {dayItems.length > 3 && (
+                  <button
+                    type="button"
+                    className="month-more"
+                    onClick={() => onExpandDay(day, dayItems)}
+                  >
+                    +{dayItems.length - 3} more
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -319,6 +421,64 @@ function MonthView({
           {unscheduled.length} item{unscheduled.length > 1 ? 's' : ''} with no date (see Upcoming).
         </p>
       )}
+    </div>
+  );
+}
+
+/** Lists every item on a single day, opened from a month cell's "+N more". */
+function DayModal({
+  date,
+  items,
+  onClose,
+  onOpen,
+  onToggleDone,
+  onDelete,
+}: {
+  date: Date;
+  items: ScheduledItem[];
+  onClose: () => void;
+  onOpen: (item: Task, date?: Date | null, end?: Date | null) => void;
+  onToggleDone: (task: Task) => void;
+  onDelete: (taskId: string) => void;
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="modal-overlay" role="presentation" onClick={onClose}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Items on ${format(date, 'MMMM d')}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button type="button" className="modal-close icon-button" onClick={onClose} aria-label="Close">
+          <X size={18} />
+        </button>
+        <div className="modal-head">
+          <span className="detail-kind is-event">{relativeLabel(date)}</span>
+          <h2 className="modal-title">{format(date, 'EEEE, MMMM d')}</h2>
+        </div>
+        <div className="day-tasks">
+          {items.map((occ) => (
+            <ItemRow
+              key={occ.occurrenceKey}
+              item={occ.item}
+              date={occ.date}
+              end={occ.end}
+              onToggleDone={onToggleDone}
+              onDelete={onDelete}
+              onOpen={onOpen}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

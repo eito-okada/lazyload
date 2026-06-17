@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { useAuth } from './AuthContext';
 import type { Task } from '../types/Task';
 import * as tasksApi from '../services/tasks';
+import * as suggestionsApi from '../services/gmailSuggestions';
+import type { Suggestion } from '../services/gmailSuggestions';
 
 interface TaskContextValue {
   /** The current upload's extracted tasks, being edited on Review. Not yet in the DB. */
@@ -18,6 +20,13 @@ interface TaskContextValue {
   deleteTask: (taskId: string) => Promise<void>;
   undoImport: (importId: string) => Promise<void>;
   refreshAllTasks: () => Promise<void>;
+  /** Gmail-scanned items awaiting review, each with its source email. */
+  suggestions: Suggestion[];
+  refreshSuggestions: () => Promise<void>;
+  /** Add a (possibly edited) suggestion to the schedule and clear it from review. */
+  approveSuggestion: (item: Task) => Promise<void>;
+  /** Discard a suggestion without adding it. */
+  dismissSuggestion: (suggestionId: string) => Promise<void>;
 }
 
 const TaskContext = createContext<TaskContextValue | undefined>(undefined);
@@ -27,6 +36,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const [draftTasks, setDraftTasks] = useState<Task[]>([]);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loadingAllTasks, setLoadingAllTasks] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
   const refreshAllTasks = useCallback(async () => {
     if (!user) {
@@ -41,9 +51,18 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  const refreshSuggestions = useCallback(async () => {
+    if (!user) {
+      setSuggestions([]);
+      return;
+    }
+    setSuggestions(await suggestionsApi.fetchSuggestions());
+  }, [user]);
+
   useEffect(() => {
     refreshAllTasks();
-  }, [refreshAllTasks]);
+    refreshSuggestions();
+  }, [refreshAllTasks, refreshSuggestions]);
 
   async function saveDraftTasks(sourceNote?: string) {
     if (!user) throw new Error('Must be signed in to save tasks');
@@ -75,6 +94,21 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     await refreshAllTasks();
   }
 
+  async function approveSuggestion(item: Task) {
+    if (!user) throw new Error('Must be signed in to approve suggestions');
+    // createItem inserts a fresh task (ignoring the suggestion id) and appends it
+    // to allTasks; then drop the suggestion row so it leaves the review queue.
+    const saved = await tasksApi.createItem(user.id, item);
+    setAllTasks((prev) => [...prev, saved]);
+    await suggestionsApi.deleteSuggestion(item.id);
+    setSuggestions((prev) => prev.filter((s) => s.task.id !== item.id));
+  }
+
+  async function dismissSuggestion(suggestionId: string) {
+    await suggestionsApi.deleteSuggestion(suggestionId);
+    setSuggestions((prev) => prev.filter((s) => s.task.id !== suggestionId));
+  }
+
   return (
     <TaskContext.Provider
       value={{
@@ -88,6 +122,10 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         deleteTask,
         undoImport,
         refreshAllTasks,
+        suggestions,
+        refreshSuggestions,
+        approveSuggestion,
+        dismissSuggestion,
       }}
     >
       {children}

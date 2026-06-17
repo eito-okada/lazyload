@@ -1007,6 +1007,145 @@
   cursor: not-allowed;
 }
 
+.schedule-sync-message {
+  width: 100%;
+  margin: var(--sp-2) 0 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* Suggestions: count badge in the sidebar + per-item review actions */
+.sidebar-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}
+
+.suggestion-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.suggestion-actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* Source email rendered as an embedded, Gmail-styled card the user can click
+   straight through to the original message. */
+.gmail-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gmail-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 1px 8px rgb(0 0 0 / 0.06);
+}
+
+/* The thin branded strip across the top, mimicking an email client header. */
+.gmail-card-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px var(--sp-3);
+  background: #ea4335; /* Gmail red */
+  color: #fff;
+}
+
+.gmail-card-logo {
+  flex-shrink: 0;
+}
+
+.gmail-card-bar-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.gmail-card-open {
+  margin-left: auto;
+  opacity: 0.9;
+}
+
+.gmail-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
+}
+
+.gmail-avatar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gmail-sender {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gmail-sender-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gmail-sender-email {
+  font-size: 12px;
+  color: var(--text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gmail-subject {
+  padding: 0 var(--sp-3);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.gmail-snippet {
+  padding: 2px var(--sp-3) var(--sp-3);
+  font-size: 13px;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .schedule-empty {
   display: flex;
   flex-direction: column;
@@ -1112,6 +1251,241 @@
 
 .task-row.done .task-row-title {
   text-decoration: line-through;
+}
+
+/* A not-yet-committed Auto-plan block (preview only). */
+.task-row.suggested {
+  background: var(--surface);
+  border-style: dashed;
+  border-color: var(--accent-border);
+  box-shadow: none;
+}
+
+.task-row.suggested:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.suggested-chip {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Banner shown above the day while an Auto-plan preview is active. */
+.plan-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-4);
+  border-radius: var(--r-md);
+  background: var(--accent-soft, var(--surface));
+  border: 1px solid var(--accent-border);
+}
+
+.plan-banner-text {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 14px;
+  color: var(--text-h);
+}
+
+.plan-banner-actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* Controls under the plan banner: split toggle + working-hours link. */
+.plan-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.plan-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 14px;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.plan-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.plan-hours-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-soft);
+  text-decoration: none;
+}
+
+.plan-hours-link:hover {
+  color: var(--accent);
+}
+
+/* The original task title shown beneath an AI-written action line. */
+.plan-source {
+  color: var(--text-soft);
+}
+
+.plan-unplaced {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.plan-hint {
+  margin: var(--sp-2) 0 0;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+/* Clickable row body opens the detail/edit modal. */
+.task-row-body.clickable {
+  cursor: pointer;
+}
+
+.task-row-body.clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--r-sm);
+}
+
+/* Destructive action button (used in the detail modal). */
+.btn-danger {
+  background: var(--card);
+  color: var(--prio-high);
+  border-color: var(--border-strong);
+}
+
+.btn-danger:hover {
+  border-color: var(--prio-high);
+  background: color-mix(in srgb, var(--prio-high) 8%, var(--card));
+}
+
+/* --- Detail / edit modal --------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  background: rgba(16, 18, 32, 0.45);
+  backdrop-filter: blur(2px);
+  animation: modal-fade 0.12s ease-out;
+}
+
+@keyframes modal-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100svh - var(--sp-8));
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--sp-5);
+}
+
+.modal-close {
+  position: absolute;
+  top: var(--sp-3);
+  right: var(--sp-3);
+}
+
+.modal-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+  padding-right: var(--sp-6);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.detail-kind {
+  align-self: flex-start;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.detail-kind.is-event {
+  background: var(--accent);
+}
+
+.detail-kind.prio-high {
+  background: var(--prio-high);
+}
+.detail-kind.prio-medium {
+  background: var(--prio-medium);
+}
+.detail-kind.prio-low {
+  background: var(--prio-low);
+}
+
+.detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 14px;
+  color: var(--text-h);
+}
+
+.detail-row svg {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+}
+
+.detail-est {
+  color: var(--text-soft);
+}
+
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.modal-cancel {
+  margin-top: var(--sp-3);
 }
 
 .task-actions {
@@ -1368,6 +1742,10 @@
 }
 
 .month-pill {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
   font-size: 11px;
   font-weight: 500;
   padding: 2px 7px;
@@ -1375,7 +1753,18 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  border: none;
   border-left: 3px solid;
+  cursor: pointer;
+}
+
+.month-pill:hover {
+  filter: brightness(0.97);
+}
+
+.month-pill:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .month-pill.prio-high {
@@ -1400,9 +1789,28 @@
 }
 
 .month-more {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
   font-size: 11px;
+  font-weight: 500;
   color: var(--text-soft);
-  padding: 0 7px;
+  padding: 1px 7px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.month-more:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.month-more:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .month-unscheduled {
@@ -1674,4 +2082,162 @@
   .form-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* ============================================================
+   Settings
+   ============================================================ */
+
+.settings-card {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-6);
+  box-sizing: border-box;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.settings-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+
+.settings-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: var(--r-md);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.settings-card-title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.settings-card-sub {
+  margin: var(--sp-1) 0 0;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.settings-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.settings-status.connected {
+  color: var(--prio-low);
+}
+
+.settings-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.settings-meta.success {
+  color: var(--prio-low);
+}
+
+.settings-meta.error {
+  color: var(--overdue);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+
+/* Working-hours form */
+.hours-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin: var(--sp-2) 0 var(--sp-4);
+}
+
+.hours-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hours-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.hours-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+
+.hours-field input {
+  font-family: var(--sans);
+  font-size: 15px;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  padding: 9px 10px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.hours-field input:focus {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.weekday-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.weekday-btn {
+  min-width: 44px;
+  padding: 7px 10px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.weekday-btn:hover {
+  border-color: var(--accent-border);
+}
+
+.weekday-btn.active {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
 }

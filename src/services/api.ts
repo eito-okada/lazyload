@@ -1,4 +1,4 @@
-import type { Task } from '../types/Task';
+import type { Task, Priority } from '../types/Task';
 
 // Develop the UI without burning API calls: set VITE_USE_MOCK=true in .env.local.
 // The Vite dev server doesn't run /api functions — use `vercel dev` to exercise
@@ -51,4 +51,63 @@ export async function extractTasksFromScreenshot(file: File): Promise<Task[]> {
 
   const data = await res.json();
   return data.tasks as Task[];
+}
+
+// --- Plan action text ---------------------------------------------------------
+// The algorithm decides WHEN each block runs; this asks the AI to write the
+// "what to actually do" label. Always falls back to templated text so the
+// planner keeps working when the endpoint/API key is unavailable (or in mock).
+
+export interface PlanTextInput {
+  id: string;
+  title: string;
+  subject?: string;
+  priority?: Priority;
+  durationMin: number;
+  startLabel: string;
+  dueLabel?: string;
+  part?: { index: number; total: number };
+}
+
+export interface PlanTextResult {
+  items: { id: string; actionText: string }[];
+  summary: string;
+}
+
+/** Plain, no-AI action text — also the fallback when the endpoint fails. */
+function templatePlanText(items: PlanTextInput[]): PlanTextResult {
+  const out = items.map((it) => {
+    const verb = it.part && it.part.index > 1 ? 'Continue' : 'Work on';
+    const part = it.part ? ` (part ${it.part.index} of ${it.part.total})` : '';
+    return { id: it.id, actionText: `${verb} ${it.title}${part}` };
+  });
+  const n = items.length;
+  return { items: out, summary: `Planned ${n} session${n === 1 ? '' : 's'} into your free time.` };
+}
+
+export async function generatePlanText(items: PlanTextInput[]): Promise<PlanTextResult> {
+  if (items.length === 0) return { items: [], summary: '' };
+  if (USE_MOCK) {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return templatePlanText(items);
+  }
+
+  try {
+    const res = await fetch('/api/plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+    });
+    if (!res.ok) return templatePlanText(items);
+    const data = (await res.json()) as PlanTextResult;
+    // Guard against a partial response: fill any gaps from the template.
+    const byId = new Map(data.items?.map((i) => [i.id, i.actionText]) ?? []);
+    const fallback = templatePlanText(items);
+    return {
+      items: items.map((it) => ({ id: it.id, actionText: byId.get(it.id) || `Work on ${it.title}` })),
+      summary: data.summary || fallback.summary,
+    };
+  } catch {
+    return templatePlanText(items);
+  }
 }

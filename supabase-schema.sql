@@ -53,31 +53,180 @@ alter table tasks enable row level security;
 -- Each policy scopes every row to its owner via auth.uid(). Without these,
 -- enabling RLS would lock everyone out by default (the safe failure mode).
 
+drop policy if exists "Users can view their own imports" on imports;
 create policy "Users can view their own imports"
   on imports for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can create their own imports" on imports;
 create policy "Users can create their own imports"
   on imports for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can delete their own imports" on imports;
 create policy "Users can delete their own imports"
   on imports for delete
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can view their own tasks" on tasks;
 create policy "Users can view their own tasks"
   on tasks for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can create their own tasks" on tasks;
 create policy "Users can create their own tasks"
   on tasks for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update their own tasks" on tasks;
 create policy "Users can update their own tasks"
   on tasks for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can delete their own tasks" on tasks;
 create policy "Users can delete their own tasks"
   on tasks for delete
+  using (auth.uid() = user_id);
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- Google Calendar sync (v4.0)
+--
+-- Push-only sync (LazyLoad → Google Calendar). The refresh token and client
+-- secret must never reach the browser, so the credential/tombstone tables below
+-- are SERVICE-ROLE ONLY: RLS is enabled with no policies, which denies every
+-- browser request (the service-role key used by the serverless functions
+-- bypasses RLS). Same safe-failure pattern as the policies above, inverted.
+-- ───────────────────────────────────────────────────────────────────────────
+
+-- Each synced task remembers the Google event it maps to, so re-syncing updates
+-- the same event in place instead of creating duplicates.
+alter table tasks add column if not exists google_event_id text;
+
+-- One row per connected user. Holds the long-lived Google refresh token used by
+-- the serverless functions to mint short-lived access tokens for the Calendar API.
+create table if not exists google_credentials (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  refresh_token text not null,
+  calendar_id text not null default 'primary',
+  time_zone text,
+  last_sync_at timestamptz,
+  last_sync_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Tombstones: when a task with a google_event_id is deleted locally, we record
+-- the orphaned Google event id here so the next sync can remove it from Google.
+create table if not exists google_deletions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  google_event_id text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists google_deletions_user_idx on google_deletions (user_id);
+
+-- Fires on direct task deletes AND on cascade deletes (e.g. removing an import),
+-- so any path that drops a synced task queues its Google event for removal.
+-- security definer lets the trigger insert into the service-role-only tombstone
+-- table even though it runs in the deleting user's (RLS-bound) context.
+create or replace function queue_google_deletion() returns trigger
+  language plpgsql security definer as $$
+begin
+  if old.google_event_id is not null then
+    insert into google_deletions(user_id, google_event_id)
+    values (old.user_id, old.google_event_id);
+  end if;
+  return old;
+end $$;
+
+drop trigger if exists tasks_google_deletion on tasks;
+create trigger tasks_google_deletion after delete on tasks
+  for each row execute function queue_google_deletion();
+
+-- RLS on, no policies → browser denied, service role bypasses.
+alter table google_credentials enable row level security;
+alter table google_deletions enable row level security;
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- Gmail deadline/event extraction (v4.1)
+--
+-- An hourly cron reads the user's recent inbox via the Gmail API and turns
+-- genuine deadlines/events into tasks. The Gmail refresh token is SERVICE-ROLE
+-- ONLY (same pattern as google_credentials): RLS on, no policies. It is stored
+-- separately from the calendar refresh token so the two scopes never collide.
+-- ───────────────────────────────────────────────────────────────────────────
+
+-- One row per Gmail-connected user. Holds the gmail.readonly refresh token used
+-- by the serverless functions to mint access tokens for the Gmail API.
+create table if not exists gmail_credentials (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  refresh_token text not null,
+  last_scan_at timestamptz,
+  last_scan_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Dedup ledger: every Gmail message we've already processed, so a given email is
+-- only ever turned into tasks once (the scan runs hourly over an overlapping
+-- 7-day window).
+create table if not exists gmail_scanned_messages (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  message_id text not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, message_id)
+);
+
+-- RLS on, no policies → browser denied, service role bypasses.
+alter table gmail_credentials enable row level security;
+alter table gmail_scanned_messages enable row level security;
+
+-- Staged suggestions awaiting the user's review. The scan (cron or manual) writes
+-- here via the service role instead of straight into `tasks`; the user then
+-- approves (→ a real task) or dismisses each one from the Suggestions screen.
+-- Unlike the credential tables, this holds no secrets and is per-user content, so
+-- it gets normal owner RLS policies (same pattern as `tasks`) — the browser reads
+-- and deletes its own rows directly with the publishable key.
+create table if not exists gmail_suggestions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  message_id text not null,
+  -- Source email context, shown next to the suggestion so the user can confirm
+  -- the extraction is correct (and deep-link to the message in Gmail).
+  email_from text,
+  email_subject text,
+  email_snippet text,
+  title text not null,
+  subject text,
+  priority text not null default 'medium' check (priority in ('high', 'medium', 'low')),
+  kind text not null default 'task' check (kind in ('task', 'event')),
+  due_date date,
+  due_time time,
+  estimated_minutes integer,
+  start_at timestamptz,
+  end_at timestamptz,
+  all_day boolean not null default false,
+  location text,
+  created_at timestamptz not null default now()
+);
+
+-- For tables provisioned before the email-context columns existed, add in place.
+alter table gmail_suggestions add column if not exists email_from text;
+alter table gmail_suggestions add column if not exists email_subject text;
+alter table gmail_suggestions add column if not exists email_snippet text;
+
+create index if not exists gmail_suggestions_user_idx on gmail_suggestions (user_id);
+
+alter table gmail_suggestions enable row level security;
+
+drop policy if exists "Users can view their own gmail suggestions" on gmail_suggestions;
+create policy "Users can view their own gmail suggestions"
+  on gmail_suggestions for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can delete their own gmail suggestions" on gmail_suggestions;
+create policy "Users can delete their own gmail suggestions"
+  on gmail_suggestions for delete
   using (auth.uid() = user_id);

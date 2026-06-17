@@ -1,6 +1,7 @@
 import { NavLink, Link } from 'react-router-dom';
-import { CalendarCheck, CalendarDays, Plus, LogIn, LogOut } from 'lucide-react';
+import { CalendarCheck, CalendarDays, Plus, Inbox, LogIn, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTasks } from '../context/TaskContext';
 import Logo from './Logo';
 
 const links = [
@@ -11,8 +12,10 @@ const links = [
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
+  const { suggestions } = useTasks();
   const email = user?.email ?? '';
   const initial = email ? email[0].toUpperCase() : '?';
+  const suggestionCount = suggestions.length;
 
   return (
     <nav className="sidebar">
@@ -33,11 +36,28 @@ export default function Navbar() {
             <span className="sidebar-link-label">{label}</span>
           </NavLink>
         ))}
+        {user && (
+          <NavLink
+            to="/suggestions"
+            className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+          >
+            <Inbox size={19} />
+            <span className="sidebar-link-label">Suggestions</span>
+            {suggestionCount > 0 && <span className="sidebar-badge">{suggestionCount}</span>}
+          </NavLink>
+        )}
       </div>
 
       <div className="sidebar-footer">
         {user ? (
           <>
+            <NavLink
+              to="/settings"
+              className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+            >
+              <Settings size={19} />
+              <span className="sidebar-link-label">Settings</span>
+            </NavLink>
             <div className="sidebar-user">
               <span className="sidebar-avatar" aria-hidden="true">{initial}</span>
               <span className="sidebar-user-email" title={email}>{email}</span>

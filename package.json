@@ -21,6 +21,7 @@
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.17.0",
     "rrule": "^2.8.1",
+    "ws": "^8.21.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -28,6 +29,7 @@
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.18.1",
     "@vercel/node": "^5.8.17",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^10.3.0",

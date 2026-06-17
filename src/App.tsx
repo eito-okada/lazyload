@@ -7,6 +7,8 @@ import Review from './pages/Review';
 import Schedule from './pages/Schedule';
 import Today from './pages/Today';
 import AddItem from './pages/AddItem';
+import Suggestions from './pages/Suggestions';
+import Settings from './pages/Settings';
 import { AuthProvider } from './context/AuthContext';
 import { TaskProvider } from './context/TaskContext';
 import './App.css';
@@ -52,6 +54,22 @@ function App() {
                 element={
                   <RequireAuth>
                     <AddItem />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/suggestions"
+                element={
+                  <RequireAuth>
+                    <Suggestions />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <RequireAuth>
+                    <Settings />
                   </RequireAuth>
                 }
               />

@@ -186,7 +186,13 @@ export async function extractTasksFromImage(
   }
 
   const parsed = ExtractedTasksSchema.parse(JSON.parse(text));
+  return mapParsedTasks(parsed);
+}
 
+type ParsedTasks = z.infer<typeof ExtractedTasksSchema>;
+
+/** Shape the validated model output into the ExtractedTask the app consumes. */
+function mapParsedTasks(parsed: ParsedTasks): ExtractedTask[] {
   return parsed.tasks.map((t, i) => {
     const id = `${Date.now()}-${i}`;
     const base = {
@@ -220,4 +226,48 @@ export async function extractTasksFromImage(
       };
     }
   });
+}
+
+/**
+ * Run Gemini extraction over the plain text of an email (subject + body). Used
+ * by the Gmail scan, which has no human-review step, so the prompt is strict:
+ * return an empty list when the message holds no genuine deadline/event.
+ */
+export async function extractTasksFromText(emailText: string): Promise<ExtractedTask[]> {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: [
+      {
+        text:
+          `Today is ${today}. The following is the text of an email (subject + body). ` +
+          `Extract only GENUINE, actionable schedule items the recipient needs to act on:\n\n` +
+          `1. Tasks/homework (kind="task"): assignments or anything with a real deadline. ` +
+          `Extract dueDate (YYYY-MM-DD, resolved from today), dueTime (HH:MM 24h when shown), ` +
+          `estimatedMinutes, and a priority inferred from urgency and due-date proximity.\n\n` +
+          `2. Events (kind="event"): meetings, classes, appointments, calls — anything that ` +
+          `occupies a time span. Extract startDate/startTime and endDate/endTime ` +
+          `(YYYY-MM-DD and HH:MM 24h), allDay=true when no specific time is shown, and ` +
+          `location (room, building, address, or video-call URL) if present.\n\n` +
+          `Convert relative dates ("tomorrow", "Friday", "next week") to absolute YYYY-MM-DD ` +
+          `using today's date. IMPORTANT: if the email is promotional, a newsletter, a ` +
+          `receipt, or otherwise contains no concrete deadline or scheduled event, return an ` +
+          `EMPTY tasks list — do not invent items. Omit task fields for events and vice versa.\n\n` +
+          `--- EMAIL ---\n${emailText}`,
+      },
+    ],
+    config: {
+      responseMimeType: "application/json",
+      responseSchema,
+    },
+  });
+
+  const text = response.text;
+  if (!text) {
+    throw new Error("Extraction returned no structured result");
+  }
+
+  const parsed = ExtractedTasksSchema.parse(JSON.parse(text));
+  return mapParsedTasks(parsed);
 }

@@ -54,12 +54,15 @@ export default function ItemRow({
   end,
   onToggleDone,
   onDelete,
+  onOpen,
 }: {
   item: Task;
   date?: Date | null;
   end?: Date | null;
   onToggleDone: (item: Task) => void;
   onDelete: (id: string) => void;
+  /** Open the item's detail/edit view. When set, the row body is clickable. */
+  onOpen?: (item: Task, date?: Date | null, end?: Date | null) => void;
 }) {
   const kind = itemKind(item);
   const isEvent = kind === 'event';
@@ -69,7 +72,22 @@ export default function ItemRow({
   return (
     <div className={`task-row${item.done ? ' done' : ''}${isEvent ? ' is-event' : ''}`}>
       <span className={`prio-bar ${barClass}`} aria-hidden="true" />
-      <div className="task-row-body">
+      <div
+        className={`task-row-body${onOpen ? ' clickable' : ''}`}
+        {...(onOpen
+          ? {
+              role: 'button',
+              tabIndex: 0,
+              onClick: () => onOpen(item, date, end),
+              onKeyDown: (e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onOpen(item, date, end);
+                }
+              },
+            }
+          : {})}
+      >
         <div className="task-row-main">
           <span className="task-row-title">{item.title}</span>
           {item.subject && <span className="task-chip">{item.subject}</span>}
