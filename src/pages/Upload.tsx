@@ -8,7 +8,7 @@ export default function Upload() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { setTasks } = useTasks();
+  const { setDraftTasks } = useTasks();
   const navigate = useNavigate();
 
   async function handleContinue() {
@@ -17,7 +17,7 @@ export default function Upload() {
     setError(null);
     try {
       const tasks = await extractTasksFromScreenshot(file);
-      setTasks(tasks);
+      setDraftTasks(tasks);
       navigate('/review');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong extracting tasks.');
@@ -28,8 +28,8 @@ export default function Upload() {
 
   return (
     <section className="page upload-page">
-      <h1>Upload a Screenshot</h1>
-      <p>Homework site, worksheet, Google Classroom, Canvas — anything works.</p>
+      <h1>Add from Photo</h1>
+      <p>Upload a screenshot or take a photo of any paper, worksheet, or screen.</p>
       <UploadBox onFileSelected={setFile} />
       <button
         type="button"

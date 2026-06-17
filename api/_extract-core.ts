@@ -8,7 +8,7 @@ import { z } from "zod";
 // Defaults to Gemini 3.5 Flash — supports vision + structured output and has
 // a free tier (rate-limited), which fits testing on a budget. Bump to a Pro
 // model later if accuracy on real screenshots needs it.
-export const MODEL = process.env.EXTRACT_MODEL ?? "gemini-3.5-flash";
+export const MODEL = process.env.EXTRACT_MODEL ?? "gemini-3.1-flash-lite";
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // ~5MB cap on the decoded image
 export const ALLOWED_MEDIA_TYPES = [
@@ -22,12 +22,24 @@ export type MediaType = (typeof ALLOWED_MEDIA_TYPES)[number];
 
 export interface ExtractedTask {
   id: string;
+  kind: "task" | "event";
   title: string;
   subject?: string;
-  dueDate?: string;
-  startTime?: string;
-  estimatedMinutes?: number;
   priority: "high" | "medium" | "low";
+  // task fields (kind === "task")
+  dueDate?: string;          // YYYY-MM-DD
+  dueTime?: string;          // HH:MM 24h
+  estimatedMinutes?: number;
+  // event fields (kind === "event")
+  startDate?: string;        // YYYY-MM-DD
+  startTime?: string;        // HH:MM 24h
+  endDate?: string;          // YYYY-MM-DD (may equal startDate for same-day events)
+  endTime?: string;          // HH:MM 24h
+  allDay?: boolean;
+  location?: string;
+  // assembled from above by the mapping step — matches frontend Task type
+  startAt?: string;          // ISO datetime e.g. "2026-06-17T09:00"
+  endAt?: string;
 }
 
 // Gemini's responseSchema uses its own Schema format (Type enum, uppercase),
@@ -41,30 +53,68 @@ const responseSchema = {
       items: {
         type: Type.OBJECT,
         properties: {
-          title: { type: Type.STRING, description: "The assignment name" },
+          kind: {
+            type: Type.STRING,
+            enum: ["task", "event"],
+            description:
+              '"task" for homework/assignments/deadlines. "event" for classes, meetings, office hours, or any item that occupies a time span.',
+          },
+          title: { type: Type.STRING, description: "The assignment or event name" },
           subject: { type: Type.STRING, nullable: true, description: "Class or subject, if shown" },
+          priority: { type: Type.STRING, enum: ["high", "medium", "low"] },
+          // task fields
           dueDate: {
             type: Type.STRING,
             nullable: true,
-            description: "Absolute due date as YYYY-MM-DD, resolved from today's date. null if none shown.",
+            description:
+              'TASK ONLY. Absolute due date as YYYY-MM-DD, resolved from today\'s date. null if no due date shown.',
           },
-          startTime: {
+          dueTime: {
             type: Type.STRING,
             nullable: true,
             description:
-              "The due TIME as HH:MM in 24-hour format — the deadline time, not a suggested work-start time. " +
-              "Homework trackers often show a time next to or below the due date, e.g. 'Due 10:00 PM', " +
-              "'11:59pm', '23:59', or 'by 9:00 AM'. Always capture it here when present. " +
-              "Use null only when no time accompanies the due date.",
+              'TASK ONLY. Due time as HH:MM in 24-hour format. Capture it when shown next to the due date ' +
+              '("Due 10:00 PM", "11:59pm", "by 9:00 AM"). null if no time shown.',
           },
           estimatedMinutes: {
             type: Type.INTEGER,
             nullable: true,
-            description: "Rough effort estimate in minutes, or null",
+            description: "TASK ONLY. Rough effort estimate in minutes, or null",
           },
-          priority: { type: Type.STRING, enum: ["high", "medium", "low"] },
+          // event fields
+          startDate: {
+            type: Type.STRING,
+            nullable: true,
+            description: "EVENT ONLY. Event start date as YYYY-MM-DD.",
+          },
+          startTime: {
+            type: Type.STRING,
+            nullable: true,
+            description: "EVENT ONLY. Event start time as HH:MM 24h. null if all-day.",
+          },
+          endDate: {
+            type: Type.STRING,
+            nullable: true,
+            description:
+              "EVENT ONLY. Event end date as YYYY-MM-DD. Often the same as startDate for same-day events.",
+          },
+          endTime: {
+            type: Type.STRING,
+            nullable: true,
+            description: "EVENT ONLY. Event end time as HH:MM 24h. null if all-day.",
+          },
+          allDay: {
+            type: Type.BOOLEAN,
+            nullable: true,
+            description: "EVENT ONLY. true when the event occupies a full day with no specific time.",
+          },
+          location: {
+            type: Type.STRING,
+            nullable: true,
+            description: "EVENT ONLY. Room number, building, or URL if visible.",
+          },
         },
-        required: ["title", "priority"],
+        required: ["kind", "title", "priority"],
       },
     },
   },
@@ -76,12 +126,21 @@ const responseSchema = {
 const ExtractedTasksSchema = z.object({
   tasks: z.array(
     z.object({
+      kind: z.enum(["task", "event"]).default("task"),
       title: z.string(),
       subject: z.string().nullable().optional(),
-      dueDate: z.string().nullable().optional(),
-      startTime: z.string().nullable().optional(),
-      estimatedMinutes: z.number().int().nullable().optional(),
       priority: z.enum(["high", "medium", "low"]),
+      // task
+      dueDate: z.string().nullable().optional(),
+      dueTime: z.string().nullable().optional(),
+      estimatedMinutes: z.number().int().nullable().optional(),
+      // event
+      startDate: z.string().nullable().optional(),
+      startTime: z.string().nullable().optional(),
+      endDate: z.string().nullable().optional(),
+      endTime: z.string().nullable().optional(),
+      allDay: z.boolean().nullable().optional(),
+      location: z.string().nullable().optional(),
     }),
   ),
 });
@@ -102,13 +161,17 @@ export async function extractTasksFromImage(
       { inlineData: { mimeType: mediaType, data: imageBase64 } },
       {
         text:
-          `Today is ${today}. Extract every assignment, homework, or task visible in this screenshot. ` +
-          `Convert all relative dates ("tomorrow", "Friday", "next week") to absolute YYYY-MM-DD dates ` +
-          `based on today's date. If no due date is shown for a task, use null for dueDate. ` +
-          `Separately, look for a due TIME next to or below the date (e.g. "10:00 PM", "11:59pm", ` +
-          `"by 9:00 AM") and put it in startTime as 24-hour HH:MM — don't skip this just because a ` +
-          `date was already found. Use null for startTime only if no time is shown. ` +
-          `Infer priority from due date proximity and wording.`,
+          `Today is ${today}. Look at this screenshot and extract two types of items:\n\n` +
+          `1. Tasks/homework (kind="task"): assignments, homework, or any item with a deadline. ` +
+          `Extract dueDate (YYYY-MM-DD, resolved from today), dueTime (HH:MM 24h — capture it ` +
+          `when shown, e.g. "Due 10:00 PM", "11:59pm", "by 9 AM"), estimatedMinutes, and ` +
+          `priority inferred from urgency and due-date proximity.\n\n` +
+          `2. Events (kind="event"): classes, lectures, meetings, office hours, lab sessions, ` +
+          `or any item that occupies a time span. Extract startDate/startTime and endDate/endTime ` +
+          `(YYYY-MM-DD and HH:MM 24h). Set allDay=true when no specific time is shown. ` +
+          `Extract location (room, building, URL) if visible.\n\n` +
+          `Convert all relative dates ("tomorrow", "Friday", "next week") to absolute YYYY-MM-DD ` +
+          `using today's date. Omit task fields for events and event fields for tasks.`,
       },
     ],
     config: {
@@ -124,13 +187,37 @@ export async function extractTasksFromImage(
 
   const parsed = ExtractedTasksSchema.parse(JSON.parse(text));
 
-  return parsed.tasks.map((t, i) => ({
-    id: `${Date.now()}-${i}`,
-    title: t.title,
-    subject: t.subject ?? undefined,
-    dueDate: t.dueDate ?? undefined,
-    startTime: t.startTime ?? undefined,
-    estimatedMinutes: t.estimatedMinutes ?? undefined,
-    priority: t.priority,
-  }));
+  return parsed.tasks.map((t, i) => {
+    const id = `${Date.now()}-${i}`;
+    const base = {
+      id,
+      kind: t.kind,
+      title: t.title,
+      subject: t.subject ?? undefined,
+      priority: t.priority,
+    } as const;
+
+    if (t.kind === "event") {
+      const startAt = t.startDate
+        ? `${t.startDate}T${t.startTime ?? "00:00"}`
+        : undefined;
+      const endAt = t.endDate
+        ? `${t.endDate}T${t.endTime ?? "23:59"}`
+        : undefined;
+      return {
+        ...base,
+        startAt,
+        endAt,
+        allDay: t.allDay ?? undefined,
+        location: t.location ?? undefined,
+      };
+    } else {
+      return {
+        ...base,
+        dueDate: t.dueDate ?? undefined,
+        dueTime: t.dueTime ?? undefined,
+        estimatedMinutes: t.estimatedMinutes ?? undefined,
+      };
+    }
+  });
 }

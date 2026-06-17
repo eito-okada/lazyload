@@ -2,8 +2,6 @@ import { useMemo, useState } from 'react';
 import {
   format,
   isToday,
-  isTomorrow,
-  isYesterday,
   differenceInCalendarDays,
   startOfMonth,
   endOfMonth,
@@ -13,74 +11,84 @@ import {
   isSameMonth,
   addMonths,
 } from 'date-fns';
-import { createEvents, type EventAttributes } from 'ics';
-import { CalendarPlus, Clock, ChevronLeft, ChevronRight, CalendarDays, List } from 'lucide-react';
+import { createEvents, type EventAttributes, type DateArray } from 'ics';
+import {
+  CalendarPlus,
+  CalendarDays,
+  List,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useTasks } from '../context/TaskContext';
-import type { Task, Priority } from '../types/Task';
+import type { Task } from '../types/Task';
+import ItemRow from '../components/TaskRow';
+import {
+  DEFAULT_DURATION_MIN,
+  dayKey,
+  relativeLabel,
+  resolveOccurrences,
+  undatedItems,
+  itemKind,
+  parseDue,
+  parseStart,
+  parseEnd,
+  type ScheduledItem,
+} from '../lib/schedule';
 
-const DEFAULT_DURATION_MIN = 60;
-
-/** Resolve a task's due date (+ optional time) into a concrete Date. */
-function parseDue(task: Task): Date | null {
-  if (!task.dueDate) return null;
-  const [y, m, d] = task.dueDate.split('-').map(Number);
-  if (!y || !m || !d) return null;
-  if (task.startTime) {
-    const [hh, mm] = task.startTime.split(':').map(Number);
-    return new Date(y, m - 1, d, hh ?? 0, mm ?? 0);
-  }
-  return new Date(y, m - 1, d);
-}
-
-function dayKey(date: Date): string {
-  return format(date, 'yyyy-MM-dd');
-}
-
-function relativeLabel(date: Date): string {
-  if (isToday(date)) return 'Today';
-  if (isTomorrow(date)) return 'Tomorrow';
-  if (isYesterday(date)) return 'Yesterday';
-  return format(date, 'EEEE, MMM d');
-}
-
-function dueBadge(date: Date): { text: string; tone: 'overdue' | 'soon' | 'later' } {
-  const diff = differenceInCalendarDays(date, new Date());
-  if (diff < 0) return { text: diff === -1 ? '1 day overdue' : `${-diff} days overdue`, tone: 'overdue' };
-  if (diff === 0) return { text: 'Due today', tone: 'soon' };
-  if (diff === 1) return { text: 'Due tomorrow', tone: 'soon' };
-  return { text: `in ${diff} days`, tone: 'later' };
-}
-
-const PRIORITY_LABEL: Record<Priority, string> = { high: 'High', medium: 'Medium', low: 'Low' };
-
-interface DatedTask {
-  task: Task;
-  due: Date;
+function toDateArray(d: Date): DateArray {
+  return [d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes()];
 }
 
 export default function Schedule() {
-  const { tasks } = useTasks();
+  const { allTasks, updateTask, deleteTask } = useTasks();
   const [view, setView] = useState<'upcoming' | 'month'>('upcoming');
+  const [month, setMonth] = useState(() => startOfMonth(new Date()));
 
-  const dated = useMemo<DatedTask[]>(() => {
-    return tasks
-      .map((task) => ({ task, due: parseDue(task) }))
-      .filter((x): x is DatedTask => x.due !== null)
-      .sort((a, b) => a.due.getTime() - b.due.getTime());
-  }, [tasks]);
+  // Wide window so overdue items and a few months of recurring events show in the agenda.
+  const upcoming = useMemo<ScheduledItem[]>(() => {
+    const now = new Date();
+    return resolveOccurrences(allTasks, addMonths(now, -2), addMonths(now, 3));
+  }, [allTasks]);
 
-  const unscheduled = useMemo(() => tasks.filter((t) => !t.dueDate), [tasks]);
+  const unscheduled = useMemo(() => undatedItems(allTasks), [allTasks]);
 
-  const [month, setMonth] = useState(() => startOfMonth(dated[0]?.due ?? new Date()));
+  function toggleDone(task: Task) {
+    updateTask(task.id, { done: !task.done });
+  }
 
   function handleExport() {
-    const icsEvents: EventAttributes[] = dated.map(({ task, due }) => ({
-      title: task.title,
-      description: task.subject ?? undefined,
-      start: [due.getFullYear(), due.getMonth() + 1, due.getDate(), due.getHours(), due.getMinutes()],
-      duration: { minutes: task.estimatedMinutes ?? DEFAULT_DURATION_MIN },
-    }));
-    const { error, value } = createEvents(icsEvents);
+    const events: EventAttributes[] = [];
+    for (const item of allTasks) {
+      if (itemKind(item) === 'event') {
+        const start = parseStart(item);
+        if (!start) continue;
+        const end = parseEnd(item);
+        const base = {
+          title: item.title,
+          description: item.subject ?? undefined,
+          location: item.location ?? undefined,
+          start: toDateArray(start),
+          recurrenceRule: item.recurrenceRule ?? undefined,
+        };
+        events.push(
+          end
+            ? { ...base, end: toDateArray(end) }
+            : { ...base, duration: { minutes: DEFAULT_DURATION_MIN } },
+        );
+      } else {
+        const due = parseDue(item);
+        if (!due) continue;
+        events.push({
+          title: item.title,
+          description: item.subject ?? undefined,
+          start: toDateArray(due),
+          duration: { minutes: item.estimatedMinutes ?? DEFAULT_DURATION_MIN },
+        });
+      }
+    }
+    const { error, value } = createEvents(events);
     if (error || !value) {
       console.error('Failed to build .ics:', error);
       return;
@@ -94,13 +102,16 @@ export default function Schedule() {
     URL.revokeObjectURL(url);
   }
 
-  if (tasks.length === 0) {
+  if (allTasks.length === 0) {
     return (
       <section className="page schedule-page">
         <h1>Your Schedule</h1>
         <div className="schedule-empty">
           <CalendarDays size={40} strokeWidth={1.5} />
-          <p>No tasks yet. Upload a screenshot to build your schedule.</p>
+          <p>Nothing scheduled yet. Upload a screenshot or add a task or event to get started.</p>
+          <Link to="/add" className="cta-button">
+            <Plus size={16} /> Add task or event
+          </Link>
         </div>
       </section>
     );
@@ -129,32 +140,56 @@ export default function Schedule() {
               <CalendarDays size={16} /> Month
             </button>
           </div>
-          <button type="button" className="export-button" onClick={handleExport} disabled={dated.length === 0}>
-            <CalendarPlus size={16} /> Add to Calendar
-          </button>
+          <div className="schedule-toolbar-actions">
+            <Link to="/add" className="export-button">
+              <Plus size={16} /> Add
+            </Link>
+            <button type="button" className="export-button" onClick={handleExport}>
+              <CalendarPlus size={16} /> Add to Calendar
+            </button>
+          </div>
         </div>
       </div>
 
       {view === 'upcoming' ? (
-        <UpcomingView dated={dated} unscheduled={unscheduled} />
+        <UpcomingView
+          dated={upcoming}
+          unscheduled={unscheduled}
+          onToggleDone={toggleDone}
+          onDelete={deleteTask}
+        />
       ) : (
-        <MonthView dated={dated} month={month} onMonthChange={setMonth} unscheduled={unscheduled} />
+        <MonthView
+          items={allTasks}
+          month={month}
+          onMonthChange={setMonth}
+          unscheduled={unscheduled}
+        />
       )}
     </section>
   );
 }
 
-function UpcomingView({ dated, unscheduled }: { dated: DatedTask[]; unscheduled: Task[] }) {
-  // Group by calendar day, preserving sorted order.
+function UpcomingView({
+  dated,
+  unscheduled,
+  onToggleDone,
+  onDelete,
+}: {
+  dated: ScheduledItem[];
+  unscheduled: Task[];
+  onToggleDone: (task: Task) => void;
+  onDelete: (taskId: string) => void;
+}) {
   const groups = useMemo(() => {
-    const map = new Map<string, DatedTask[]>();
-    for (const item of dated) {
-      const key = dayKey(item.due);
+    const map = new Map<string, ScheduledItem[]>();
+    for (const occ of dated) {
+      const key = dayKey(occ.date);
       const arr = map.get(key);
-      if (arr) arr.push(item);
-      else map.set(key, [item]);
+      if (arr) arr.push(occ);
+      else map.set(key, [occ]);
     }
-    return Array.from(map.entries()).map(([key, items]) => ({ key, date: items[0].due, items }));
+    return Array.from(map.entries()).map(([key, items]) => ({ key, date: items[0].date, items }));
   }, [dated]);
 
   return (
@@ -168,8 +203,15 @@ function UpcomingView({ dated, unscheduled }: { dated: DatedTask[]; unscheduled:
               <span className="day-date">{format(date, 'MMM d')}</span>
             </div>
             <div className="day-tasks">
-              {items.map(({ task, due }) => (
-                <TaskRow key={task.id} task={task} due={due} />
+              {items.map((occ) => (
+                <ItemRow
+                  key={occ.occurrenceKey}
+                  item={occ.item}
+                  date={occ.date}
+                  end={occ.end}
+                  onToggleDone={onToggleDone}
+                  onDelete={onDelete}
+                />
               ))}
             </div>
           </div>
@@ -179,19 +221,11 @@ function UpcomingView({ dated, unscheduled }: { dated: DatedTask[]; unscheduled:
       {unscheduled.length > 0 && (
         <div className="day-group">
           <div className="day-heading muted">
-            <span className="day-label">No due date</span>
+            <span className="day-label">No date</span>
           </div>
           <div className="day-tasks">
             {unscheduled.map((task) => (
-              <div className="task-row" key={task.id}>
-                <span className={`prio-bar prio-${task.priority ?? 'medium'}`} aria-hidden="true" />
-                <div className="task-row-body">
-                  <div className="task-row-main">
-                    <span className="task-row-title">{task.title}</span>
-                    {task.subject && <span className="task-chip">{task.subject}</span>}
-                  </div>
-                </div>
-              </div>
+              <ItemRow key={task.id} item={task} onToggleDone={onToggleDone} onDelete={onDelete} />
             ))}
           </div>
         </div>
@@ -200,36 +234,13 @@ function UpcomingView({ dated, unscheduled }: { dated: DatedTask[]; unscheduled:
   );
 }
 
-function TaskRow({ task, due }: { task: Task; due: Date }) {
-  const badge = dueBadge(due);
-  const priority = task.priority ?? 'medium';
-  return (
-    <div className="task-row">
-      <span className={`prio-bar prio-${priority}`} aria-hidden="true" />
-      <div className="task-row-body">
-        <div className="task-row-main">
-          <span className="task-row-title">{task.title}</span>
-          {task.subject && <span className="task-chip">{task.subject}</span>}
-        </div>
-        <div className="task-row-meta">
-          <span className="task-time">
-            <Clock size={13} /> {task.startTime ? format(due, 'h:mm a') : 'All day'}
-          </span>
-          <span className={`task-badge badge-${badge.tone}`}>{badge.text}</span>
-          <span className={`prio-tag prio-${priority}`}>{PRIORITY_LABEL[priority]}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function MonthView({
-  dated,
+  items,
   month,
   onMonthChange,
   unscheduled,
 }: {
-  dated: DatedTask[];
+  items: Task[];
   month: Date;
   onMonthChange: (d: Date) => void;
   unscheduled: Task[];
@@ -244,15 +255,20 @@ function MonthView({
   );
 
   const byDay = useMemo(() => {
-    const map = new Map<string, DatedTask[]>();
-    for (const item of dated) {
-      const key = dayKey(item.due);
+    const occ = resolveOccurrences(
+      items,
+      startOfWeek(startOfMonth(month)),
+      endOfWeek(endOfMonth(month)),
+    );
+    const map = new Map<string, ScheduledItem[]>();
+    for (const item of occ) {
+      const key = dayKey(item.date);
       const arr = map.get(key);
       if (arr) arr.push(item);
       else map.set(key, [item]);
     }
     return map;
-  }, [dated]);
+  }, [items, month]);
 
   return (
     <div className="month">
@@ -273,7 +289,7 @@ function MonthView({
           </div>
         ))}
         {days.map((day) => {
-          const items = byDay.get(dayKey(day)) ?? [];
+          const dayItems = byDay.get(dayKey(day)) ?? [];
           const outside = !isSameMonth(day, month);
           return (
             <div
@@ -282,16 +298,16 @@ function MonthView({
             >
               <span className="month-cell-num">{format(day, 'd')}</span>
               <div className="month-cell-tasks">
-                {items.slice(0, 3).map(({ task }) => (
+                {dayItems.slice(0, 3).map((occ) => (
                   <span
-                    key={task.id}
-                    className={`month-pill prio-${task.priority ?? 'medium'}`}
-                    title={task.title}
+                    key={occ.occurrenceKey}
+                    className={`month-pill ${occ.kind === 'event' ? 'prio-event' : `prio-${occ.item.priority ?? 'medium'}`}`}
+                    title={occ.item.title}
                   >
-                    {task.title}
+                    {occ.item.title}
                   </span>
                 ))}
-                {items.length > 3 && <span className="month-more">+{items.length - 3} more</span>}
+                {dayItems.length > 3 && <span className="month-more">+{dayItems.length - 3} more</span>}
               </div>
             </div>
           );
@@ -300,7 +316,7 @@ function MonthView({
 
       {unscheduled.length > 0 && (
         <p className="month-unscheduled">
-          {unscheduled.length} task{unscheduled.length > 1 ? 's' : ''} with no due date (see Upcoming).
+          {unscheduled.length} item{unscheduled.length > 1 ? 's' : ''} with no date (see Upcoming).
         </p>
       )}
     </div>
