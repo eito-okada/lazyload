@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTasks } from '../context/TaskContext';
+import { useWorkingHours, pruneOverrides, type DayOverride } from '../lib/preferences';
 import { syncNow } from '../services/googleSync';
 import type { Task } from '../types/Task';
 import ItemRow from '../components/TaskRow';
@@ -54,6 +55,7 @@ interface OpenItem {
 
 export default function Schedule() {
   const { allTasks, updateTask, deleteTask } = useTasks();
+  const [prefs, setPrefs] = useWorkingHours();
   const [view, setView] = useState<'upcoming' | 'month'>('upcoming');
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [syncing, setSyncing] = useState(false);
@@ -80,6 +82,16 @@ export default function Schedule() {
 
   function toggleDone(task: Task) {
     updateTask(task.id, { done: !task.done });
+  }
+
+  const [overrideEditDay, setOverrideEditDay] = useState<Date | null>(null);
+
+  function setOverride(day: Date, value: DayOverride | null) {
+    const key = dayKey(day);
+    const next: Record<string, DayOverride> = { ...prefs.overrides };
+    if (value === null) delete next[key];
+    else next[key] = value;
+    setPrefs({ ...prefs, overrides: pruneOverrides(next) });
   }
 
   function handleExport() {
@@ -131,8 +143,11 @@ export default function Schedule() {
     setSyncMessage(null);
     try {
       const r = await syncNow();
+      const pushed = r.created + r.updated + r.deleted;
+      const pulled = r.imported + r.updatedLocal + r.deletedLocal;
       setSyncMessage(
-        `Synced to Google — ${r.created} added, ${r.updated} updated, ${r.deleted} removed.`,
+        `Synced with Google — ${pushed} change${pushed === 1 ? '' : 's'} pushed, ` +
+          `${pulled} imported.`,
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sync failed.';
@@ -197,7 +212,7 @@ export default function Schedule() {
               onClick={handleGoogleSync}
               disabled={syncing}
             >
-              <RefreshCw size={16} /> {syncing ? 'Syncing…' : 'Sync to Google Calendar'}
+              <RefreshCw size={16} /> {syncing ? 'Syncing…' : 'Sync with Google Calendar'}
             </button>
           </div>
         </div>
@@ -218,6 +233,8 @@ export default function Schedule() {
           month={month}
           onMonthChange={setMonth}
           unscheduled={unscheduled}
+          overrides={prefs.overrides}
+          onEditOverride={setOverrideEditDay}
           onOpen={openItem}
           onExpandDay={(date, items) => setExpandedDay({ date, items })}
         />
@@ -243,6 +260,20 @@ export default function Schedule() {
           onUpdate={updateTask}
           onDelete={deleteTask}
           onToggleDone={toggleDone}
+        />
+      )}
+
+      {overrideEditDay && (
+        <OverrideEditModal
+          day={overrideEditDay}
+          current={prefs.overrides[dayKey(overrideEditDay)]}
+          defaultWorkStart={prefs.workStart}
+          defaultWorkEnd={prefs.workEnd}
+          onSet={(value) => {
+            setOverride(overrideEditDay, value);
+            setOverrideEditDay(null);
+          }}
+          onClose={() => setOverrideEditDay(null)}
         />
       )}
     </section>
@@ -327,6 +358,8 @@ function MonthView({
   month,
   onMonthChange,
   unscheduled,
+  overrides,
+  onEditOverride,
   onOpen,
   onExpandDay,
 }: {
@@ -334,6 +367,8 @@ function MonthView({
   month: Date;
   onMonthChange: (d: Date) => void;
   unscheduled: Task[];
+  overrides: Record<string, DayOverride>;
+  onEditOverride: (day: Date) => void;
   onOpen: (item: Task, date?: Date | null, end?: Date | null) => void;
   onExpandDay: (date: Date, items: ScheduledItem[]) => void;
 }) {
@@ -383,12 +418,37 @@ function MonthView({
         {days.map((day) => {
           const dayItems = byDay.get(dayKey(day)) ?? [];
           const outside = !isSameMonth(day, month);
+          const override = overrides[dayKey(day)];
+          const ovClass = override === 'off' ? ' ov-off' : override ? ' ov-work' : '';
+          const customHours = typeof override === 'object' && override !== null ? override : null;
           return (
             <div
               key={day.toISOString()}
-              className={`month-cell${outside ? ' outside' : ''}${isToday(day) ? ' today' : ''}`}
+              className={`month-cell${outside ? ' outside' : ''}${isToday(day) ? ' today' : ''}${ovClass}`}
             >
-              <span className="month-cell-num">{format(day, 'd')}</span>
+              <div className="month-cell-head">
+                <span className="month-cell-num">{format(day, 'd')}</span>
+                <button
+                  type="button"
+                  className={`month-cell-override${ovClass}`}
+                  onClick={() => onEditOverride(day)}
+                  title={
+                    override === 'off'
+                      ? 'Day off (click to edit)'
+                      : override
+                        ? 'School day (click to edit)'
+                        : 'Set as day off or school day'
+                  }
+                  aria-label={`Planning availability for ${format(day, 'MMMM d')}`}
+                >
+                  {override === 'off' ? 'Off' : override ? 'Sch' : '+'}
+                </button>
+              </div>
+              {customHours && (
+                <span className="month-cell-hours-label">
+                  {customHours.start}–{customHours.end}
+                </span>
+              )}
               <div className="month-cell-tasks">
                 {dayItems.slice(0, 3).map((occ) => (
                   <button
@@ -416,11 +476,107 @@ function MonthView({
         })}
       </div>
 
+      <p className="month-hint">
+        Tap a day's <strong>+</strong> badge to mark it <strong>Off</strong> (holiday) or{' '}
+        <strong>School</strong> (extra school day with custom hours). Auto-plan uses these.
+      </p>
+
       {unscheduled.length > 0 && (
         <p className="month-unscheduled">
           {unscheduled.length} item{unscheduled.length > 1 ? 's' : ''} with no date (see Upcoming).
         </p>
       )}
+    </div>
+  );
+}
+
+/** Edit (or clear) a day's planning availability override. */
+function OverrideEditModal({
+  day,
+  current,
+  defaultWorkStart,
+  defaultWorkEnd,
+  onSet,
+  onClose,
+}: {
+  day: Date;
+  current: DayOverride | undefined;
+  defaultWorkStart: string;
+  defaultWorkEnd: string;
+  onSet: (value: DayOverride | null) => void;
+  onClose: () => void;
+}) {
+  const initMode = !current ? 'none' : current === 'off' ? 'off' : 'work';
+  const [mode, setMode] = useState<'none' | 'off' | 'work'>(initMode);
+  const [start, setStart] = useState(
+    typeof current === 'object' && current !== null ? current.start : defaultWorkStart,
+  );
+  const [end, setEnd] = useState(
+    typeof current === 'object' && current !== null ? current.end : defaultWorkEnd,
+  );
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  function save() {
+    if (mode === 'none') onSet(null);
+    else if (mode === 'off') onSet('off');
+    else if (start === defaultWorkStart && end === defaultWorkEnd) onSet('work');
+    else onSet({ start, end });
+  }
+
+  return (
+    <div className="modal-overlay" role="presentation" onClick={onClose}>
+      <div
+        className="modal override-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Planning availability for ${format(day, 'MMMM d')}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button type="button" className="modal-close icon-button" onClick={onClose} aria-label="Close">
+          <X size={18} />
+        </button>
+        <div className="modal-head">
+          <h2 className="modal-title">{format(day, 'EEEE, MMMM d')}</h2>
+          <p className="modal-sub">Planning availability for auto-schedule</p>
+        </div>
+
+        <div className="override-options">
+          {(['none', 'off', 'work'] as const).map((opt) => (
+            <label key={opt} className={`override-option${mode === opt ? ' selected' : ''}`}>
+              <input type="radio" name="override-mode" value={opt} checked={mode === opt}
+                onChange={() => setMode(opt)} />
+              <span className="override-option-label">
+                {opt === 'none' ? 'Normal (follow weekly schedule)' :
+                 opt === 'off' ? 'Day off — no school / work block' :
+                 'School / work day'}
+              </span>
+            </label>
+          ))}
+        </div>
+
+        {mode === 'work' && (
+          <div className="override-hours">
+            <label className="override-time-field">
+              <span>Starts</span>
+              <input type="time" value={start} onChange={(e) => setStart(e.target.value)} />
+            </label>
+            <label className="override-time-field">
+              <span>Ends</span>
+              <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+            </label>
+          </div>
+        )}
+
+        <div className="override-actions">
+          <button type="button" className="btn btn-primary" onClick={save}>Save</button>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
     </div>
   );
 }

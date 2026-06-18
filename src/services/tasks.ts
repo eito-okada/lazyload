@@ -1,9 +1,9 @@
 import { supabase } from '../lib/supabase';
-import type { Task, Priority, ItemKind } from '../types/Task';
+import type { Task, Priority, ItemKind, ItemSource } from '../types/Task';
 
 const COLUMNS =
   'id, import_id, title, subject, due_date, due_time, estimated_minutes, priority, done, ' +
-  'kind, start_at, end_at, all_day, location, recurrence_rule';
+  'kind, start_at, end_at, all_day, location, recurrence_rule, source';
 
 interface TaskRow {
   id: string;
@@ -21,6 +21,7 @@ interface TaskRow {
   all_day: boolean | null;
   location: string | null;
   recurrence_rule: string | null;
+  source: ItemSource | null;
 }
 
 function rowToTask(row: TaskRow): Task {
@@ -39,6 +40,7 @@ function rowToTask(row: TaskRow): Task {
     allDay: row.all_day ?? undefined,
     location: row.location ?? undefined,
     recurrenceRule: row.recurrence_rule ?? undefined,
+    source: row.source ?? 'local',
   };
 }
 

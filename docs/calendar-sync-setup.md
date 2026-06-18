@@ -1,10 +1,16 @@
 # Google Calendar Sync — setup
 
-LazyLoad v4.0 can push your tasks and events into your Google Calendar. Sync is
-**push-only** (LazyLoad → Google) and runs both on demand (the **Sync now**
-button in Settings) and in the background (an hourly Vercel cron). The Google
-refresh token and client secret live only on the server; the browser never sees
-them.
+LazyLoad syncs your tasks and events with your Google Calendar **both ways** (v5):
+LazyLoad items push to Google, and events you add or edit directly in Google flow
+back into LazyLoad. Sync runs on demand (the **Sync now** button in Settings, or
+**Sync with Google Calendar** on the schedule) and in the background (an hourly
+Vercel cron). The Google refresh token and client secret live only on the server;
+the browser never sees them.
+
+> Versions: v4.0 shipped push-only sync (LazyLoad → Google). **v5 adds the import
+> direction** (Google → LazyLoad) and "newest edit wins" conflict resolution. The
+> setup is unchanged — no new OAuth scope is needed (`calendar.events` already
+> grants read access); just re-run the migration so the new columns exist.
 
 This guide covers the one-time setup. Most of it is configuring credentials —
 the code is already in place.
@@ -22,6 +28,17 @@ is safe. It adds:
 - `google_credentials` — one row per connected user (holds the refresh token).
 - `google_deletions` — tombstones so locally-deleted items get removed from Google.
 - a delete trigger that queues those tombstones.
+
+**v5 (two-way) additions** — re-run the file to pick these up:
+
+- `tasks.source` — `'google'` for events that first appeared on Google (shown with
+  a **Google** badge), `'local'` for everything LazyLoad created.
+- `tasks.updated_at` / `last_synced_at` / `google_synced_at` — the edit clock,
+  reconcile marker, and remote watermark that drive "newest edit wins" without the
+  app's own pushes echoing back. A `before update` trigger keeps `updated_at`
+  current on every edit (and in lockstep with `last_synced_at` on sync writes).
+- `google_credentials.sync_token` / `last_import_at` / `last_import_error` — the
+  Google incremental sync token and import-side status.
 
 **Verify the security model:** both new tables have RLS enabled with **no
 policies**, which means the browser (anon/publishable key) is denied and only the
@@ -89,8 +106,13 @@ automatically sends `Authorization: Bearer <CRON_SECRET>` to the cron path once
 4. Add an event and a dated task in LazyLoad, then click **Sync now** — both
    should appear on your Google Calendar. Edit one and re-sync: it updates in
    place (no duplicate). Delete one and re-sync: it disappears from Google.
+5. Now create an event **in Google Calendar** and click **Sync now** again — it
+   appears in LazyLoad's schedule with a **Google** badge. Edit it in Google → it
+   updates here; delete it in Google → it disappears here.
 
 ### How items map to calendar entries
+
+**Push (LazyLoad → Google):**
 
 - **Events** → timed entries (`start_at`/`end_at`); all-day events become all-day
   entries; recurring events carry their `RRULE`.
@@ -98,6 +120,27 @@ automatically sends `Authorization: Bearer <CRON_SECRET>` to the cron path once
   `estimated_minutes` (default 30 min).
 - **Tasks with only a due date** → an all-day entry on that date.
 - **Tasks with no date** → skipped.
+
+### Two-way sync (v5)
+
+Each sync **imports first, then pushes**. The import side pulls only what changed
+since the last run (Google's incremental sync token; the first run seeds a window
+from ~today through the next ~12 months), so it stays cheap.
+
+- **New Google events** become LazyLoad events (`source = 'google'`, shown with a
+  **Google** badge). Recurring series import as a master with its `RRULE`;
+  per-instance exceptions are not imported yet.
+- **Edited / deleted Google events** update or remove the matching LazyLoad item.
+- **Conflicts** (the same event changed in both places between syncs) resolve by
+  **newest edit wins**. LazyLoad-origin items still round-trip via their stored
+  `google_event_id`; an unchanged, already-synced item is touched by neither side,
+  so there's no churn.
+- Imported events are full two-way: editing or deleting one in LazyLoad propagates
+  back to Google. Pushes use `PATCH` (merge), so fields LazyLoad doesn't model
+  (attendees, colors, etc.) are preserved.
+
+> Times follow the app's single-timezone assumption (browser timezone == the
+> connected calendar's timezone), the same convention the rest of the schedule uses.
 
 ---
 
@@ -143,3 +186,8 @@ now** to verify before the hourly cron takes over.
 - **Nothing happens in the background.** Confirm `CRON_SECRET` is set in Vercel
   and that the project plan allows crons. You can trigger it manually:
   `curl -H "Authorization: Bearer $CRON_SECRET" https://<your-app>/api/google/sync-all`.
+- **Google events aren't importing.** Make sure you re-ran `supabase-schema.sql`
+  after upgrading to v5 (the import side needs the new `tasks`/`google_credentials`
+  columns). If imports stop after a long idle period, Google may have expired the
+  stored `sync_token` (HTTP 410); the next sync detects this and automatically
+  re-seeds a full forward window.

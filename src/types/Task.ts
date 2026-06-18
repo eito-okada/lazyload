@@ -3,6 +3,9 @@ export type Priority = "high" | "medium" | "low";
 /** An item is either a homework "task" (has a deadline) or a calendar "event" (has a span). */
 export type ItemKind = "task" | "event";
 
+/** Where an item came from. 'google' = mirrored in from Google Calendar (v5). */
+export type ItemSource = "local" | "google";
+
 export interface Task {
   id: string;
   title: string;
@@ -11,6 +14,8 @@ export interface Task {
   kind?: ItemKind;
   priority?: Priority;
   done?: boolean;
+  /** Origin of the item; 'local' unless it first appeared on Google Calendar. */
+  source?: ItemSource;
 
   // --- Task fields (kind === "task") ---
   /** Absolute due date in ISO form, e.g. "2026-06-17". */

@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "extract": "tsx scripts/extract.ts"
+    "extract": "tsx scripts/extract.ts",
+    "test:google": "tsx scripts/test-google-sync.ts"
   },
   "dependencies": {
     "@google/genai": "^2.8.0",

@@ -8,13 +8,21 @@ export interface SyncStatus {
   connected: boolean;
   lastSyncAt: string | null;
   lastError: string | null;
+  /** Last time the import (Google → LazyLoad) direction ran. */
+  lastImportAt: string | null;
+  lastImportError: string | null;
 }
 
 export interface SyncResult {
+  // Push direction (LazyLoad → Google).
   created: number;
   updated: number;
   deleted: number;
   skipped: number;
+  // Import direction (Google → LazyLoad).
+  imported: number;
+  updatedLocal: number;
+  deletedLocal: number;
 }
 
 async function authHeader(): Promise<Record<string, string>> {

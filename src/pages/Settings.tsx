@@ -83,7 +83,9 @@ export default function Settings() {
           <div>
             <h2 className="settings-card-title">Google Calendar</h2>
             <p className="settings-card-sub">
-              Push your tasks and events to your Google Calendar.
+              Two-way sync with your Google Calendar. Your tasks and events push to Google, and
+              events you add or edit in Google appear here. When the same event changes in both
+              places, the most recent edit wins.
             </p>
           </div>
         </div>
@@ -105,13 +107,19 @@ export default function Settings() {
                 <AlertTriangle size={14} /> Last sync error: {status.lastError}
               </p>
             )}
-            {lastResult && (
-              <p className="settings-meta success">
-                Synced — {lastResult.created} added, {lastResult.updated} updated,{' '}
-                {lastResult.deleted} removed
-                {lastResult.skipped ? `, ${lastResult.skipped} skipped` : ''}.
+            {status?.lastImportError && (
+              <p className="settings-meta error">
+                <AlertTriangle size={14} /> Last import error: {status.lastImportError}
               </p>
             )}
+            {lastResult && (
+              <p className="settings-meta success">
+                Pushed {lastResult.created} added, {lastResult.updated} updated,{' '}
+                {lastResult.deleted} removed · Imported {lastResult.imported} added,{' '}
+                {lastResult.updatedLocal} updated, {lastResult.deletedLocal} removed.
+              </p>
+            )}
+            <p className="settings-meta">Syncs automatically every hour, both directions.</p>
             <div className="settings-actions">
               <button type="button" className="btn btn-primary" onClick={handleSync} disabled={busy}>
                 <RefreshCw size={16} /> {busy ? 'Syncing…' : 'Sync now'}
@@ -301,7 +309,8 @@ function WorkingHoursCard() {
           <h2 className="settings-card-title">Working hours</h2>
           <p className="settings-card-sub">
             Auto-plan fits tasks into your free time — outside the work/school block, around your
-            events — and never in the past.
+            events — and never in the past. For one-off holidays or extra school days, tap a day's
+            badge in the Month calendar.
           </p>
         </div>
       </div>

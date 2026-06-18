@@ -193,6 +193,13 @@ export default function ItemDetail({
                 </div>
               )}
 
+              {item.source === 'google' && (
+                <div className="detail-row">
+                  <CalendarDays size={16} />
+                  <span>From Google Calendar — changes sync both ways</span>
+                </div>
+              )}
+
               {!isEvent && (
                 <div className="detail-row">
                   <span className={`prio-tag prio-${priority}`}>{PRIORITY_LABEL[priority]} priority</span>

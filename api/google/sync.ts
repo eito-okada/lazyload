@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { requireUser, HttpError } from "../_supabase";
-import { syncUser } from "../_google";
+import { reconcileUser } from "../_google";
 
-// Push the authenticated user's items to Google Calendar now.
+// Two-way sync for the authenticated user now: import Google changes, then push.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -10,7 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { userId } = await requireUser(req);
     const { timeZone } = req.body ?? {};
-    const result = await syncUser(userId, typeof timeZone === "string" ? timeZone : undefined);
+    const result = await reconcileUser(userId, typeof timeZone === "string" ? timeZone : undefined);
     if (result.error === "not_connected") {
       return res.status(409).json({ error: "Google Calendar not connected" });
     }

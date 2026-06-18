@@ -230,3 +230,62 @@ drop policy if exists "Users can delete their own gmail suggestions" on gmail_su
 create policy "Users can delete their own gmail suggestions"
   on gmail_suggestions for delete
   using (auth.uid() = user_id);
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- Two-way Google Calendar sync (v5)
+--
+-- v4.0 was push-only (LazyLoad → Google). v5 also imports: events created or
+-- edited directly in Google flow back into `tasks`, and conflicts resolve by
+-- "newest edit wins". That needs three pieces of bookkeeping per task plus an
+-- incremental sync token per user.
+--
+--   * source           — 'google' for events that first appeared on Google (shown
+--                         with a "Google" badge); 'local' for everything LazyLoad
+--                         created, even after it has been pushed up.
+--   * updated_at        — local last-edit clock, bumped by the trigger below on
+--                         EVERY update, so every client edit path is covered for
+--                         free (no service/UI changes needed).
+--   * last_synced_at    — set to now() whenever we push OR import a row. A row is
+--                         "locally dirty" when updated_at > last_synced_at.
+--   * google_synced_at  — the Google event's `updated` timestamp at the last time
+--                         we reconciled it (set on both push and import). A row is
+--                         "remotely dirty" when event.updated > google_synced_at.
+--                         Storing the post-push value is what stops our own hourly
+--                         push from echoing back as a remote change (no ping-pong).
+-- ───────────────────────────────────────────────────────────────────────────
+
+alter table tasks add column if not exists source text not null default 'local'
+  check (source in ('local', 'google'));
+alter table tasks add column if not exists updated_at timestamptz not null default now();
+alter table tasks add column if not exists last_synced_at timestamptz;
+alter table tasks add column if not exists google_synced_at timestamptz;
+
+-- Maintain updated_at so it reflects genuine *edits*, not sync bookkeeping. A
+-- sync write (push or import) sets last_synced_at; we keep updated_at in lockstep
+-- with it so the row is not seen as "locally dirty" right after we reconcile it
+-- (which would otherwise trigger a needless re-push). Any other update is a real
+-- edit, so updated_at jumps to now() and the row becomes locally dirty until the
+-- next push catches it up.
+create or replace function set_tasks_updated_at() returns trigger
+  language plpgsql as $$
+begin
+  if new.last_synced_at is distinct from old.last_synced_at then
+    new.updated_at := new.last_synced_at;
+  else
+    new.updated_at := now();
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists tasks_set_updated_at on tasks;
+create trigger tasks_set_updated_at before update on tasks
+  for each row execute function set_tasks_updated_at();
+
+create index if not exists tasks_user_google_event_idx on tasks (user_id, google_event_id);
+
+-- Per-user incremental sync state for the import direction. sync_token is
+-- Google's events.list nextSyncToken (null → next import seeds a full forward
+-- window); last_import_at / last_import_error mirror the push-side fields.
+alter table google_credentials add column if not exists sync_token text;
+alter table google_credentials add column if not exists last_import_at timestamptz;
+alter table google_credentials add column if not exists last_import_error text;

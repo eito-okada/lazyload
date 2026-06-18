@@ -92,6 +92,11 @@ export default function ItemRow({
           <span className="task-row-title">{item.title}</span>
           {item.subject && <span className="task-chip">{item.subject}</span>}
           {isEvent && <span className="task-chip event-chip">Event</span>}
+          {item.source === 'google' && (
+            <span className="task-chip google-chip" title="From Google Calendar">
+              Google
+            </span>
+          )}
         </div>
         {date && (
           <div className="task-row-meta">

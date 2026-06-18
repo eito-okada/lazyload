@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { serviceClient } from "../_supabase";
-import { syncUser } from "../_google";
+import { reconcileUser } from "../_google";
 
 // Background cron entry: sync every connected user. Guarded by CRON_SECRET so it
 // can't be triggered by the public. Vercel cron sends the secret as a header
@@ -25,16 +25,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let created = 0;
     let updated = 0;
     let deleted = 0;
+    let imported = 0;
+    let updatedLocal = 0;
+    let deletedLocal = 0;
     const errors: string[] = [];
     for (const cred of creds ?? []) {
       users++;
-      const r = await syncUser(cred.user_id, cred.time_zone ?? undefined);
+      const r = await reconcileUser(cred.user_id, cred.time_zone ?? undefined);
       created += r.created;
       updated += r.updated;
       deleted += r.deleted;
+      imported += r.imported;
+      updatedLocal += r.updatedLocal;
+      deletedLocal += r.deletedLocal;
       if (r.error) errors.push(`${cred.user_id}: ${r.error}`);
     }
-    return res.status(200).json({ users, created, updated, deleted, errors });
+    return res
+      .status(200)
+      .json({ users, created, updated, deleted, imported, updatedLocal, deletedLocal, errors });
   } catch (err) {
     console.error("Unexpected error in /api/google/sync-all:", err);
     return res.status(500).json({ error: "Internal error" });
