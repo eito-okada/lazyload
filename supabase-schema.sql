@@ -289,3 +289,37 @@ create index if not exists tasks_user_google_event_idx on tasks (user_id, google
 alter table google_credentials add column if not exists sync_token text;
 alter table google_credentials add column if not exists last_import_at timestamptz;
 alter table google_credentials add column if not exists last_import_error text;
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- Cross-device working hours (v6)
+--
+-- Moves the auto-scheduling preferences (WorkingHours) from browser localStorage
+-- to a Supabase row so they follow the user across devices. Normal owner RLS
+-- (browser reads/writes its own row with the publishable key). The client
+-- continues to use localStorage as an instant-read cache; the DB is the source
+-- of truth when multiple devices are in play.
+-- ───────────────────────────────────────────────────────────────────────────
+
+create table if not exists user_preferences (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  working_hours jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table user_preferences enable row level security;
+
+drop policy if exists "Users can view their own preferences" on user_preferences;
+create policy "Users can view their own preferences"
+  on user_preferences for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can upsert their own preferences" on user_preferences;
+create policy "Users can upsert their own preferences"
+  on user_preferences for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their own preferences" on user_preferences;
+create policy "Users can update their own preferences"
+  on user_preferences for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
