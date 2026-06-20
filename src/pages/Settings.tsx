@@ -377,6 +377,36 @@ function WorkingHoursCard() {
             />
           </label>
         </div>
+
+        <div className="hours-pair">
+          <label className="hours-field">
+            <span className="hours-label">Break between sessions (min)</span>
+            <input
+              type="number"
+              min={0}
+              step={5}
+              value={draft.breakMinutes}
+              onChange={(e) => set('breakMinutes', Math.max(0, Number(e.target.value) || 0))}
+            />
+          </label>
+        </div>
+
+        <label className="hours-check">
+          <input
+            type="checkbox"
+            checked={draft.spaceSessions}
+            onChange={(e) => set('spaceSessions', e.target.checked)}
+          />
+          <span>Spread split tasks across days instead of front-loading</span>
+        </label>
+        <label className="hours-check">
+          <input
+            type="checkbox"
+            checked={draft.deepWorkEarly}
+            onChange={(e) => set('deepWorkEarly', e.target.checked)}
+          />
+          <span>Schedule higher-priority work earlier in the day</span>
+        </label>
       </div>
 
       <div className="settings-actions">

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireUser, serviceClient, HttpError } from "../_supabase";
+import { requireUser, serviceClient, HttpError } from "../_supabase.js";
 
 // Store (or refresh) the user's Google refresh token, server-side only.
 export default async function handler(req: VercelRequest, res: VercelResponse) {

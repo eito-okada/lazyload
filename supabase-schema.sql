@@ -323,3 +323,51 @@ create policy "Users can update their own preferences"
   on user_preferences for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- v8: separate the deadline from the planned work session
+--
+-- A task has two distinct times: when it's DUE (due_date/due_time, set by the
+-- user) and when you'll DO it (the planned work session, set by the auto-planner).
+-- Previously Accept overwrote due_date/due_time with the work-session start,
+-- destroying the deadline. These columns give the work session its own home.
+-- LazyLoad-only: the Google sync column list in api/_google.ts is NOT extended,
+-- so planned sessions never push to Google Calendar.
+-- ───────────────────────────────────────────────────────────────────────────
+
+alter table tasks add column if not exists planned_date date;
+alter table tasks add column if not exists planned_start time;
+alter table tasks add column if not exists planned_minutes integer;
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- v9: free-text notes on a task
+--
+-- A description/notes field so a task can carry the context that turns a vague
+-- line into a clear next step ("problems 3–18, show your work"). LazyLoad-only:
+-- not added to the Google sync column list, so notes never push to Calendar.
+-- ───────────────────────────────────────────────────────────────────────────
+
+alter table tasks add column if not exists notes text;
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- v10: actual time spent on a task (duration learning)
+--
+-- When a task is checked off, LazyLoad asks (skippably) how long it really took
+-- and stores the answer here. Comparing actual_minutes against estimated_minutes
+-- across a subject's recent tasks lets the coach gently flag estimates that run
+-- consistently long or short. LazyLoad-only: not in the Google sync column list.
+-- ───────────────────────────────────────────────────────────────────────────
+
+alter table tasks add column if not exists actual_minutes integer;
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- v11: "in progress" marker for a work session
+--
+-- When the user taps "Start" on a task's planned session, we record the instant
+-- here. While set (and the task isn't done) the task is actively being worked,
+-- so it's excluded from the "slipped past their time" catch-up nudge instead of
+-- being flagged the moment its slot ends. Cleared on completion or when the
+-- session is moved to another day. LazyLoad-only: not in the Google sync columns.
+-- ───────────────────────────────────────────────────────────────────────────
+
+alter table tasks add column if not exists started_at timestamptz;

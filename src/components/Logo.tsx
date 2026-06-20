@@ -9,6 +9,7 @@ interface LogoProps {
  */
 export default function Logo({ size = 32, withWordmark = false }: LogoProps) {
   const gradId = 'lazyload-logo-grad';
+  const sheenId = 'lazyload-logo-sheen';
   return (
     <span className="logo">
       <svg
@@ -23,14 +24,24 @@ export default function Logo({ size = 32, withWordmark = false }: LogoProps) {
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
             <stop stopColor="var(--accent)" />
-            <stop offset="1" stopColor="var(--accent-strong)" />
+            <stop offset="0.5" stopColor="var(--accent)" />
+            <stop offset="1" stopColor="var(--good)" />
+          </linearGradient>
+          <linearGradient id={sheenId} x1="16" y1="0" x2="16" y2="20" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#fff" stopOpacity="0.25" />
+            <stop offset="1" stopColor="#fff" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <rect width="32" height="32" rx="9" fill={`url(#${gradId})`} />
+        <rect width="32" height="32" rx="9.5" fill={`url(#${gradId})`} />
+        <rect width="32" height="32" rx="9.5" fill={`url(#${sheenId})`} />
+        {/* "Ease check": short left arm, long lifting right arm — effortlessly done. */}
         <path
-          d="M17.2 6.5 9.5 17.2h5.1l-1.8 8.3 7.7-10.7h-5.1l1.8-8.3Z"
-          fill="#fff"
-          fillOpacity="0.95"
+          d="M8.5 16.4 13.1 21 24 9"
+          fill="none"
+          stroke="#fff"
+          strokeWidth="3.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
       </svg>
       {withWordmark && <span className="logo-wordmark">LazyLoad</span>}

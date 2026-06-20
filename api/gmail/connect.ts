@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireUser, serviceClient, HttpError } from "../_supabase";
+import { requireUser, serviceClient, HttpError } from "../_supabase.js";
 
 // Store (or refresh) the user's Gmail refresh token, server-side only. Kept
 // separate from google_credentials so the calendar and gmail scopes/tokens

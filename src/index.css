@@ -1,27 +1,56 @@
 :root {
-  /* ---------- Palette: iris / indigo (light) ---------- */
-  --bg: #ffffff;
-  --surface: #f7f8fa;
+  /* ---------- Palette: cool mist (light) ---------- */
+  --bg: #f6f8fb;
+  --surface: #eef2f8;
   --card: #ffffff;
-  --border: #e9eaef;
-  --border-strong: #dcdee5;
-  --code-bg: #f3f4f7;
-  --social-bg: rgba(243, 244, 247, 0.6);
+  --border: #e3e8f0;
+  --border-strong: #d2dae6;
+  --code-bg: #eef2f8;
+  --social-bg: rgba(238, 242, 248, 0.7);
 
-  --text-h: #15171c;
-  --text: #5b616e;
-  --text-soft: #8a909c;
+  --text-h: #1c2530;
+  --text: #515c6b;
+  --text-soft: #8a94a3;
 
-  --accent: #5b5bf2;
-  --accent-strong: #4848e0;
-  --accent-bg: rgba(91, 91, 242, 0.08);
-  --accent-border: rgba(91, 91, 242, 0.35);
+  /* primary — clear blue */
+  --accent: #2f6fed;
+  --accent-strong: #1f5ad6;
+  --accent-bg: rgba(47, 111, 237, 0.08);
+  --accent-border: rgba(47, 111, 237, 0.26);
 
-  /* ---------- Elevation (soft, layered) ---------- */
-  --shadow-xs: 0 1px 2px rgba(16, 18, 32, 0.04);
-  --shadow-sm: 0 1px 2px rgba(16, 18, 32, 0.04), 0 2px 6px rgba(16, 18, 32, 0.05);
-  --shadow-md: 0 4px 12px rgba(16, 18, 32, 0.07), 0 2px 4px rgba(16, 18, 32, 0.04);
-  --shadow-lg: 0 12px 32px rgba(16, 18, 32, 0.1), 0 4px 10px rgba(16, 18, 32, 0.05);
+  /* semantic: teal = good/done, amber = caution, red = danger */
+  --good: #1f9d83;
+  --good-strong: #17836d;
+  --good-bg: rgba(31, 157, 131, 0.10);
+  --good-border: rgba(31, 157, 131, 0.28);
+  --warn: #e08a3c;
+  --warn-strong: #c9742a;
+  --warn-bg: rgba(224, 138, 60, 0.12);
+  --warn-border: rgba(224, 138, 60, 0.30);
+  --danger: #e2574c;
+  --danger-strong: #cf3f34;
+  --danger-bg: rgba(226, 87, 76, 0.10);
+  --danger-border: rgba(226, 87, 76, 0.30);
+
+  /* pop = the "live now" highlight; reuses accent (no warm coral anymore) */
+  --pop: var(--accent);
+  --pop-strong: var(--accent-strong);
+  --pop-bg: var(--accent-bg);
+  --pop-border: var(--accent-border);
+
+  /* restrained signature treatments (near-flat depth + soft glow + mist wash) */
+  --grad-accent: linear-gradient(135deg, #3b7bf0 0%, #2f6fed 100%);
+  --grad-pop: var(--grad-accent);
+  --grad-brand: linear-gradient(120deg, #2f6fed 0%, #1f9d83 100%);
+  --glow-accent: 0 8px 26px rgba(47, 111, 237, 0.20);
+  --glow-pop: var(--glow-accent);
+  --mist: radial-gradient(900px 480px at 72% -12%, rgba(47, 111, 237, 0.06), transparent 60%);
+
+  /* ---------- Elevation (soft, layered — cool tint) ---------- */
+  --shadow-xs: 0 1px 2px rgba(28, 37, 48, 0.04);
+  --shadow-sm: 0 1px 2px rgba(28, 37, 48, 0.04), 0 2px 6px rgba(28, 37, 48, 0.06);
+  --shadow-md: 0 4px 14px rgba(28, 37, 48, 0.08), 0 2px 4px rgba(28, 37, 48, 0.05);
+  --shadow-lg: 0 14px 38px rgba(28, 37, 48, 0.12), 0 4px 10px rgba(28, 37, 48, 0.06);
   /* legacy alias */
   --shadow: var(--shadow-md);
 
@@ -32,22 +61,26 @@
   --sp-4: 16px;
   --sp-5: 24px;
   --sp-6: 32px;
+  --sp-7: 40px;
   --sp-8: 48px;
 
-  /* ---------- Radii ---------- */
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 14px;
-  --r-xl: 20px;
+  /* ---------- Radii (soft, airy) ---------- */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
   --r-pill: 999px;
+
+  /* ---------- Motion ---------- */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ---------- Typography ---------- */
   --sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
-  --display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --display: 'Hanken Grotesk', 'Inter', system-ui, sans-serif;
   --heading: var(--display);
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 16px/1.5 var(--sans);
+  font: 16px/1.6 var(--sans);
   letter-spacing: 0.1px;
   color-scheme: light dark;
   color: var(--text);
@@ -64,22 +97,47 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0e0f13;
-    --surface: #15171d;
-    --card: #1a1d24;
-    --border: #262a33;
-    --border-strong: #333845;
-    --code-bg: #1b1e25;
-    --social-bg: rgba(38, 42, 51, 0.5);
+    --bg: #0e1217;
+    --surface: #161c24;
+    --card: #1b232d;
+    --border: #283341;
+    --border-strong: #36414f;
+    --code-bg: #161c24;
+    --social-bg: rgba(40, 51, 65, 0.5);
 
-    --text-h: #f3f4f7;
-    --text: #a0a6b2;
-    --text-soft: #757c89;
+    --text-h: #eef2f7;
+    --text: #aab4c2;
+    --text-soft: #717c8a;
 
-    --accent: #8b8bf7;
-    --accent-strong: #a5a5fa;
-    --accent-bg: rgba(139, 139, 247, 0.14);
-    --accent-border: rgba(139, 139, 247, 0.45);
+    --accent: #6d97ff;
+    --accent-strong: #88aaff;
+    --accent-bg: rgba(109, 151, 255, 0.14);
+    --accent-border: rgba(109, 151, 255, 0.42);
+
+    --good: #34c8a6;
+    --good-strong: #57d6ba;
+    --good-bg: rgba(52, 200, 166, 0.14);
+    --good-border: rgba(52, 200, 166, 0.40);
+    --warn: #f0a35e;
+    --warn-strong: #f6ba80;
+    --warn-bg: rgba(240, 163, 94, 0.16);
+    --warn-border: rgba(240, 163, 94, 0.42);
+    --danger: #f0685a;
+    --danger-strong: #f78a7e;
+    --danger-bg: rgba(240, 104, 90, 0.16);
+    --danger-border: rgba(240, 104, 90, 0.42);
+
+    --pop: var(--accent);
+    --pop-strong: var(--accent-strong);
+    --pop-bg: var(--accent-bg);
+    --pop-border: var(--accent-border);
+
+    --grad-accent: linear-gradient(135deg, #6d97ff 0%, #4f80f5 100%);
+    --grad-pop: var(--grad-accent);
+    --grad-brand: linear-gradient(120deg, #6d97ff 0%, #34c8a6 100%);
+    --glow-accent: 0 8px 26px rgba(109, 151, 255, 0.24);
+    --glow-pop: var(--glow-accent);
+    --mist: radial-gradient(900px 480px at 72% -12%, rgba(109, 151, 255, 0.10), transparent 60%);
 
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.25);
@@ -114,9 +172,9 @@ h3 {
 
 h1 {
   font-size: 44px;
-  line-height: 1.05;
-  font-weight: 700;
-  letter-spacing: -1.5px;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.8px;
   margin: 24px 0;
   @media (max-width: 1024px) {
     font-size: 36px;
@@ -126,11 +184,30 @@ h1 {
 
 h2 {
   font-size: 22px;
-  line-height: 1.2;
-  letter-spacing: -0.4px;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
   margin: 0 0 8px;
   @media (max-width: 1024px) {
     font-size: 20px;
+  }
+}
+
+/* Gentle entrance for hero content (briefing, focus card) */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes fade-up {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 }
 

@@ -1,6 +1,6 @@
-import { serviceClient } from "./_supabase";
-import { refreshAccessToken } from "./_google";
-import { extractTasksFromText, type ExtractedTask } from "./_extract-core";
+import { serviceClient } from "./_supabase.js";
+import { refreshAccessToken } from "./_google.js";
+import { extractTasksFromText, type ExtractedTask } from "./_extract-core.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

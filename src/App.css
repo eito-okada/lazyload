@@ -3,23 +3,30 @@
    ============================================================ */
 
 :root {
-  --prio-high: #ef4444;
-  --prio-medium: #f59e0b;
-  --prio-low: #10b981;
-  --prio-high-soft: rgba(239, 68, 68, 0.12);
-  --prio-medium-soft: rgba(245, 158, 11, 0.14);
-  --prio-low-soft: rgba(16, 185, 129, 0.14);
-  --overdue: #dc2626;
-  --overdue-soft: rgba(220, 38, 38, 0.08);
+  --prio-high: #e2574c;
+  --prio-medium: #d98b34;
+  --prio-low: #1f9d83;
+  --prio-task: #94a0b0;
+  --prio-task-soft: rgba(148, 160, 176, 0.14);
+  --prio-high-soft: rgba(226, 87, 76, 0.12);
+  --prio-medium-soft: rgba(217, 139, 52, 0.14);
+  --prio-low-soft: rgba(31, 157, 131, 0.13);
+  --overdue: #e2574c;
+  --overdue-soft: rgba(226, 87, 76, 0.09);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --prio-high: #f87171;
-    --prio-medium: #fbbf24;
-    --prio-low: #34d399;
-    --overdue: #f87171;
-    --overdue-soft: rgba(248, 113, 113, 0.12);
+    --prio-high: #f0685a;
+    --prio-medium: #f0a35e;
+    --prio-low: #34c8a6;
+    --prio-task: #9aa6b6;
+    --prio-task-soft: rgba(154, 166, 182, 0.16);
+    --prio-high-soft: rgba(240, 104, 90, 0.16);
+    --prio-medium-soft: rgba(240, 163, 94, 0.16);
+    --prio-low-soft: rgba(52, 200, 166, 0.15);
+    --overdue: #f0685a;
+    --overdue-soft: rgba(240, 104, 90, 0.14);
   }
 }
 
@@ -31,6 +38,9 @@
   display: flex;
   flex: 1;
   min-height: 100svh;
+  background-image: var(--mist);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 .sidebar {
@@ -45,7 +55,6 @@
   flex-direction: column;
   gap: var(--sp-2);
   padding: var(--sp-5) var(--sp-4);
-  border-right: 1px solid var(--border);
   background: var(--surface);
 }
 
@@ -81,7 +90,7 @@
   cursor: pointer;
   width: 100%;
   text-align: left;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
 }
 
 .sidebar-link svg {
@@ -94,39 +103,67 @@
 }
 
 .sidebar-link.active {
-  background: var(--accent-bg);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-/* left accent indicator on active (desktop) */
-.sidebar-link.active::before {
-  content: '';
-  position: absolute;
-  left: calc(-1 * var(--sp-4));
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 18px;
-  border-radius: 0 3px 3px 0;
-  background: var(--accent);
-}
-
-.sidebar-link.primary {
   background: var(--accent);
   color: #fff;
   font-weight: 600;
-  margin-top: var(--sp-2);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm), var(--glow-accent);
 }
 
-.sidebar-link.primary:hover {
+.sidebar-link.active:hover {
   background: var(--accent-strong);
   color: #fff;
 }
 
-.sidebar-link.primary.active::before {
-  display: none;
+/* ---------- Floating "Add" action ---------- */
+
+.fab {
+  position: fixed;
+  bottom: var(--sp-6);
+  right: var(--sp-6);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 54px;
+  padding: 0 var(--sp-5);
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-md), var(--glow-accent);
+  transition: background 0.2s var(--ease), transform 0.15s var(--ease), box-shadow 0.2s var(--ease);
+  z-index: 30;
+}
+
+.fab:hover {
+  background: var(--accent-strong);
+  transform: translateY(-1px);
+  color: #fff;
+  box-shadow: var(--shadow-lg), var(--glow-accent);
+}
+
+.fab:active {
+  transform: translateY(0);
+}
+
+.fab-label {
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .fab {
+    bottom: calc(72px + env(safe-area-inset-bottom) + var(--sp-3));
+    right: var(--sp-4);
+    height: 50px;
+    padding: 0 var(--sp-4);
+  }
+  .fab-label {
+    display: none;
+  }
 }
 
 .sidebar-footer {
@@ -304,7 +341,12 @@
 
 .btn-primary:hover {
   background: var(--accent-strong);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md), var(--glow-accent);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
 }
 
 .btn-secondary {
@@ -474,7 +516,10 @@
 }
 
 .accent-text {
-  color: var(--accent);
+  background: var(--grad-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .home-tagline {
@@ -881,6 +926,12 @@
   margin-top: var(--sp-2);
 }
 
+/* Standalone suggestions route: left-aligned column like the rest of the queues. */
+.review-page {
+  align-items: stretch;
+  text-align: left;
+}
+
 .success-state {
   display: flex;
   flex-direction: column;
@@ -921,6 +972,226 @@
 .schedule-page {
   max-width: 800px;
   align-items: stretch;
+}
+
+/* ---- Daily Plan with the "Everything left" rail beside it ---- */
+.today-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--sp-6);
+  align-items: start;
+  max-width: 1160px;
+  text-align: left;
+}
+
+.today-main {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.today-rail {
+  position: sticky;
+  top: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* ---------- Today header: slim command bar + warm subhead ---------- */
+
+.today-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding-top: var(--sp-2);
+}
+
+.today-topbar-spacer {
+  flex: 1 1 auto;
+}
+
+.today-topbar-jump {
+  white-space: nowrap;
+}
+
+.today-flags {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.flag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warn-strong);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  white-space: nowrap;
+}
+.flag-chip svg {
+  color: var(--warn);
+}
+.flag-chip-button {
+  cursor: pointer;
+}
+.flag-chip-button:hover {
+  background: color-mix(in srgb, var(--warn) 18%, var(--card));
+}
+
+.today-plan-cta {
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}
+
+/* Warm one-liner + a thin progress line: reassurance, then the day's shape. */
+.today-subhead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--sp-1);
+}
+
+.today-briefing {
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 500;
+  letter-spacing: -0.3px;
+  color: var(--text-h);
+  max-width: 46ch;
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .today-briefing {
+    font-size: 18px;
+  }
+}
+
+/* Staggered entrance down the main column. */
+.fade-seq {
+  animation: fade-up 0.5s var(--ease) both;
+}
+.today-topbar.fade-seq {
+  animation-delay: 0s;
+}
+.today-subhead.fade-seq {
+  animation-delay: 0.07s;
+}
+.now-cluster.fade-seq {
+  animation-delay: 0.14s;
+}
+
+.workload-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+}
+
+.workload-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.workload-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-h);
+}
+
+.workload-title svg {
+  color: var(--accent);
+}
+
+.workload-summary {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.workload-overdue-note {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--overdue);
+}
+
+.workload-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* Collapsed-by-default buckets (Later / No date) keep the rail calm. */
+.workload-collapsible > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.workload-collapsible > summary::-webkit-details-marker {
+  display: none;
+}
+.workload-collapsible > summary::after {
+  content: '+';
+  margin-left: auto;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-soft);
+  transition: transform 0.2s var(--ease);
+}
+.workload-collapsible[open] > summary::after {
+  content: '–';
+}
+.workload-collapsible > summary:hover {
+  color: var(--text-h);
+}
+.workload-collapsible[open] > .day-tasks {
+  margin-top: var(--sp-2);
+  animation: fade-up 0.25s var(--ease) both;
+}
+
+.workload-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-5) var(--sp-2);
+  text-align: center;
+  color: var(--text);
+}
+
+.workload-empty svg {
+  color: var(--prio-low);
+}
+
+@media (max-width: 900px) {
+  .today-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .today-rail {
+    position: static;
+  }
 }
 
 .schedule-header {
@@ -1059,31 +1330,33 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--r-md);
-  background: var(--surface);
+  background: var(--card);
   border: 1px solid var(--border);
   overflow: hidden;
   text-decoration: none;
   color: inherit;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
 }
 
 .gmail-card:hover {
-  border-color: var(--accent);
-  box-shadow: 0 1px 8px rgb(0 0 0 / 0.06);
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow-sm);
 }
 
-/* The thin branded strip across the top, mimicking an email client header. */
+/* A calm header strip; the Gmail brand reads through a small red mark, not a full red bar. */
 .gmail-card-bar {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
   padding: 6px var(--sp-3);
-  background: #ea4335; /* Gmail red */
-  color: #fff;
+  background: var(--code-bg);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-soft);
 }
 
 .gmail-card-logo {
   flex-shrink: 0;
+  color: #ea4335; /* Gmail red, as a small accent only */
 }
 
 .gmail-card-bar-label {
@@ -1094,7 +1367,7 @@
 
 .gmail-card-open {
   margin-left: auto;
-  opacity: 0.9;
+  opacity: 0.7;
 }
 
 .gmail-card-head {
@@ -1378,6 +1651,95 @@
   border-radius: var(--r-sm);
 }
 
+/* Right-side group under the plan banner: re-plan link + working-hours link. */
+.plan-controls-right {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+/* Inline edit controls on a previewed plan block (Part B). */
+.plan-row-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 10px;
+  flex-shrink: 0;
+}
+
+.plan-row-edit button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.plan-row-edit button:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.plan-row-edit button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.plan-row-edit button.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* A pinned (locked) plan block keeps its slot when re-planning around it. */
+.task-row.suggested.locked {
+  border-style: solid;
+  border-color: var(--accent);
+}
+
+/* Banner surfacing committed sessions that slipped past their time (Part C). */
+.behind-banner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-2);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-soft);
+}
+
+/* Genuine urgency (conflicts) keeps a warm-red edge; everything else stays calm. */
+.behind-banner.conflict-banner {
+  border-left-color: var(--overdue);
+}
+
+.behind-banner-text {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.behind-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 /* Destructive action button (used in the detail modal). */
 .btn-danger {
   background: var(--card);
@@ -1399,9 +1761,9 @@
   align-items: center;
   justify-content: center;
   padding: var(--sp-4);
-  background: rgba(16, 18, 32, 0.45);
-  backdrop-filter: blur(2px);
-  animation: modal-fade 0.12s ease-out;
+  background: rgba(44, 38, 26, 0.42);
+  backdrop-filter: blur(3px);
+  animation: modal-fade 0.16s var(--ease);
 }
 
 @keyframes modal-fade {
@@ -1462,6 +1824,9 @@
   background: var(--accent);
 }
 
+.detail-kind.prio-task {
+  background: var(--prio-task);
+}
 .detail-kind.prio-high {
   background: var(--prio-high);
 }
@@ -1496,6 +1861,15 @@
   color: var(--text-soft);
 }
 
+.detail-row-notes {
+  align-items: flex-start;
+}
+
+.detail-notes {
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
 .modal-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1504,6 +1878,45 @@
 
 .modal-cancel {
   margin-top: var(--sp-3);
+}
+
+/* "How long did that take?" completion prompt (#8 duration learning). */
+.completion-modal {
+  max-width: 380px;
+}
+
+.completion-sub {
+  margin: var(--sp-2) 0 0;
+  color: var(--text-muted, var(--muted));
+  font-size: 0.92rem;
+}
+
+.completion-input-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin: var(--sp-4) 0 var(--sp-2);
+}
+
+.completion-input-row input {
+  width: 96px;
+  font-size: 1.4rem;
+  font-weight: 600;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--surface, transparent);
+  color: inherit;
+}
+
+.completion-input-row span {
+  color: var(--text-muted, var(--muted));
+}
+
+.completion-hint {
+  margin: 0 0 var(--sp-4);
+  font-size: 0.82rem;
+  color: var(--text-muted, var(--muted));
 }
 
 .task-actions {
@@ -1545,6 +1958,9 @@
 }
 .prio-bar.prio-low {
   background: var(--prio-low);
+}
+.prio-bar.prio-task {
+  background: var(--prio-task);
 }
 .prio-bar.prio-event {
   background: var(--accent);
@@ -1611,6 +2027,12 @@
   align-items: center;
   gap: 5px;
   color: var(--text);
+}
+
+/* The planned work session (when you'll do a task) — distinct from its deadline badge. */
+.task-time.work-time {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .task-badge {
@@ -1891,6 +2313,11 @@
   border-color: var(--prio-low);
   color: var(--text-h);
 }
+.month-pill.prio-task {
+  background: var(--prio-task-soft);
+  border-color: var(--prio-task);
+  color: var(--text-h);
+}
 .month-pill.prio-event {
   background: var(--accent-bg);
   border-color: var(--accent);
@@ -1992,15 +2419,15 @@
 
 .day-progress {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 6px;
-  width: 100%;
-  max-width: 320px;
+  gap: var(--sp-3);
+  width: auto;
 }
 
 .day-progress-track {
-  width: 100%;
+  flex: 0 0 120px;
+  width: 120px;
   height: 6px;
   border-radius: var(--r-pill);
   background: var(--code-bg);
@@ -2011,7 +2438,7 @@
   display: block;
   height: 100%;
   border-radius: var(--r-pill);
-  background: var(--accent);
+  background: var(--grad-accent);
   transition: width 0.3s ease;
 }
 
@@ -2019,6 +2446,7 @@
   font-size: 12px;
   color: var(--text-soft);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .today-plan {
@@ -2115,7 +2543,8 @@
 }
 
 .form-field input,
-.form-field select {
+.form-field select,
+.form-field textarea {
   font-family: var(--sans);
   font-size: 15px;
   color: var(--text-h);
@@ -2126,8 +2555,15 @@
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
+.form-field textarea {
+  resize: vertical;
+  min-height: 64px;
+  line-height: 1.45;
+}
+
 .form-field input:focus,
-.form-field select:focus {
+.form-field select:focus,
+.form-field textarea:focus {
   outline: none;
   border-color: var(--accent-border);
   box-shadow: 0 0 0 3px var(--accent-bg);
@@ -2181,6 +2617,20 @@
 .form-hint {
   font-size: 12px;
   color: var(--text-soft);
+}
+
+.est-time-picker {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.est-time-picker select {
+  flex: 1;
+}
+
+.est-custom-input {
+  width: 90px;
+  flex: 0 0 90px;
 }
 
 .item-form .cta-button {
@@ -2304,6 +2754,23 @@
   gap: var(--sp-3);
 }
 
+.hours-check {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 14px;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.hours-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex: none;
+}
+
 .hours-field input {
   font-family: var(--sans);
   font-size: 15px;
@@ -2423,8 +2890,19 @@
 
 /* ── Inbox page ─────────────────────────────────────────────── */
 
+/* Override the centered .page defaults — Inbox reads as a left-aligned column. */
+.inbox-page {
+  align-items: stretch;
+  text-align: left;
+  gap: var(--sp-7);
+}
+
 .inbox-page h1 {
-  margin-bottom: var(--sp-5);
+  margin-bottom: 0;
+}
+
+.inbox-section {
+  width: 100%;
 }
 
 .inbox-section-title {
@@ -2432,6 +2910,20 @@
   font-weight: 600;
   color: var(--text-h);
   margin: 0 0 var(--sp-2);
+}
+
+/* Section header with an inline action (e.g. Scan inbox), used by SuggestionsList. */
+.suggestions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-2);
+}
+
+.suggestions-header .inbox-section-title {
+  margin: 0;
 }
 
 .inbox-intro {
@@ -2504,4 +2996,690 @@
 .inbox-card-action {
   font-size: 13px;
   text-align: center;
+}
+
+/* Decision-hub cards carry a task preview, so align the icon/actions to the top. */
+.inbox-card.all-clear,
+.inbox-card:has(.inbox-task-list) {
+  align-items: flex-start;
+}
+
+.inbox-card.all-clear .inbox-card-icon {
+  color: var(--ok, var(--accent));
+}
+
+.inbox-task-list {
+  list-style: none;
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inbox-task {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: 13px;
+  min-width: 0;
+}
+
+.inbox-task-title {
+  color: var(--text-h);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-task-subject {
+  color: var(--text-soft);
+  flex-shrink: 0;
+}
+
+.inbox-task-due {
+  margin-left: auto;
+  color: var(--text-soft);
+  flex-shrink: 0;
+}
+
+.inbox-task-more {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+/* ============================================================
+   Daily Plan — coach layer (briefing + "right now" focus card)
+   ============================================================ */
+
+.coach-briefing {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-3);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 14px;
+  color: var(--text-h);
+}
+.coach-briefing svg {
+  color: var(--accent);
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+.coach-briefing p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+/* ---------- "Now" zone: the single boldest block on Today ---------- */
+.now-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.now-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  padding: var(--sp-5);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-md);
+}
+.now-hero.is-live {
+  border-color: var(--accent-border);
+  background: var(--mist), color-mix(in srgb, var(--accent) 6%, var(--card));
+  box-shadow: var(--shadow-md), var(--glow-accent);
+}
+
+/* Live progress ring — how far through the current session you are. */
+.now-ring {
+  position: relative;
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+}
+.now-ring svg {
+  width: 64px;
+  height: 64px;
+  transform: rotate(-90deg);
+}
+.now-ring-track {
+  fill: none;
+  stroke: var(--accent-bg);
+  stroke-width: 6;
+}
+.now-ring-fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s var(--ease);
+}
+.now-ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  /* Hanken Grotesk digits have empty descender space below the baseline, so a
+     box-centered line reads ~3px high inside the ring. Nudge down to optically
+     center the numerals. */
+  transform: translateY(3px);
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--accent-strong);
+  font-variant-numeric: tabular-nums;
+}
+.now-ring-label small {
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 1px;
+}
+
+.now-hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.now-hero-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+.now-hero.is-live .now-hero-label {
+  color: var(--accent-strong);
+}
+.now-hero-title {
+  font-family: var(--display);
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--text-h);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.now-hero-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+.now-hero-left {
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+.now-hero-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 0 0 auto;
+}
+
+@media (max-width: 560px) {
+  .now-hero {
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+  }
+  .now-hero-title {
+    white-space: normal;
+  }
+  .now-hero-actions {
+    width: 100%;
+  }
+}
+
+/* Start / Done / Not-done button cluster on the focus card and in-progress rows. */
+.focus-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 0 0 auto;
+}
+
+/* "Not done" button + its two-action popover. */
+.notdone-wrap {
+  position: relative;
+}
+.notdone-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 210px;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+  animation: modal-fade 0.12s ease-out;
+}
+.notdone-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-h);
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.notdone-menu button:hover {
+  background: var(--surface);
+}
+
+/* In-progress lane: started tasks (Done / Not-done) shown where the misfiring
+   "slipped past their time" banner used to put them. */
+.inprogress-lane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+.inprogress-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: color-mix(in srgb, var(--accent) 5%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius: 14px;
+}
+.inprogress-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.inprogress-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.inprogress-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.inprogress-meta {
+  font-size: 12.5px;
+  color: var(--text-soft);
+}
+
+.timeline-empty {
+  padding: var(--sp-5) var(--sp-4);
+  text-align: center;
+  color: var(--text-soft);
+  font-size: 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 14px;
+}
+
+/* ============================================================
+   Daily Plan — vertical day timeline
+   ============================================================ */
+
+.day-timeline {
+  position: relative;
+  display: flex;
+  margin-bottom: var(--sp-4);
+}
+.timeline-gutter {
+  position: relative;
+  flex: 0 0 44px;
+  width: 44px;
+}
+.timeline-hour-label {
+  position: absolute;
+  right: 8px;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-soft);
+}
+.timeline-track {
+  position: relative;
+  flex: 1 1 auto;
+  border-left: 1px solid var(--border-strong);
+}
+.timeline-hour-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed var(--border);
+  pointer-events: none;
+}
+.timeline-busy-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* A calm, flat shaded region for unavailable hours — not a heavy hatch wall. */
+  background: color-mix(in srgb, var(--text-soft) 6%, transparent);
+  border-radius: var(--r-sm);
+  pointer-events: none;
+}
+.timeline-now {
+  position: absolute;
+  left: -1px;
+  right: 0;
+  height: 0;
+  border-top: 2px solid var(--accent);
+  z-index: 3;
+  pointer-events: none;
+}
+.timeline-now-dot {
+  position: absolute;
+  left: -5px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.timeline-block {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--prio-task);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+  transition: box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.timeline-block.is-session {
+  background: var(--prio-task-soft);
+}
+.timeline-block.is-event {
+  border-left-color: var(--accent);
+  background: var(--accent-bg);
+  cursor: default;
+  touch-action: auto;
+}
+.timeline-block.selected {
+  box-shadow: 0 0 0 2px var(--accent-border), var(--shadow-md);
+  border-color: var(--accent-border);
+}
+.timeline-block.suggested {
+  border-style: dashed;
+  border-left-style: solid;
+}
+.timeline-block.locked {
+  border-left-color: var(--accent);
+  cursor: default;
+}
+.timeline-block.dragging {
+  z-index: 5;
+  box-shadow: var(--shadow-lg);
+  opacity: 0.95;
+}
+.timeline-block.invalid {
+  border-color: var(--overdue);
+  border-left-color: var(--overdue);
+  background: var(--overdue-soft);
+}
+.timeline-block-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.timeline-block-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.timeline-block-meta {
+  font-size: 11px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-resize-handle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 9px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.timeline-resize-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 22px;
+  height: 2px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+
+.timeline-block-controls {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  z-index: 4;
+}
+.timeline-block-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.timeline-block-controls button:hover:not(:disabled) {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.timeline-block-controls button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.timeline-block-controls button.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.anytime-strip {
+  margin-top: var(--sp-3);
+}
+
+/* Conflict banner: a committed session overlaps an event — amber, distinct from
+   the (red) "you fell behind" banner. */
+.conflict-banner {
+  background: color-mix(in srgb, var(--prio-medium) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--prio-medium) 32%, var(--border));
+}
+.conflict-banner .behind-banner-text svg {
+  color: var(--prio-medium);
+}
+
+/* A clickable chip (e.g. an overlapping event opening its detail view). Inherits
+   the .task-chip pill; adds affordance + a button reset. */
+.chip-button {
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.12s ease;
+}
+.chip-button:hover {
+  background: color-mix(in srgb, var(--accent) 18%, var(--accent-bg));
+}
+
+/* A short momentum beat after checking a task off (#3). Calm, auto-dismissing. */
+.momentum-nudge {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-3);
+  border-radius: var(--r-md);
+  font-size: 14px;
+  color: var(--text-h);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  animation: modal-fade 0.16s ease-out;
+}
+.momentum-nudge svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* The overdue carry-in note appended to the plan banner summary (#1). */
+.plan-banner-note {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+/* --- Week-at-a-glance strip (#2) -------------------------------------------- */
+.week-strip {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.week-strip-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.week-strip-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.week-strip-warn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--prio-high);
+}
+
+.week-strip-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+/* One day's column: a vertical capacity track with a fill, plus its labels. */
+.week-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 2px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.week-bar:hover {
+  background: var(--accent-bg);
+}
+.week-bar.selected {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.week-bar-track {
+  position: relative;
+  width: 9px;
+  height: 44px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--text-soft) 18%, transparent);
+  overflow: hidden;
+}
+
+/* Fill grows from the bottom; height is set inline from booked/capacity. */
+.week-bar-fill {
+  position: absolute;
+  inset: auto 0 0 0;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transition: height 0.18s ease;
+  transform-origin: bottom;
+  animation: week-grow 0.55s var(--ease) both;
+}
+@keyframes week-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes week-grow {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+.week-bar.over .week-bar-fill {
+  background: var(--prio-high);
+}
+
+.week-bar-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-soft);
+  text-transform: uppercase;
+}
+.week-bar-date {
+  font-size: 11px;
+  color: var(--text-soft);
+}
+.week-bar.over .week-bar-label,
+.week-bar.over .week-bar-date {
+  color: var(--prio-high);
+}
+
+/* Today reads as an accent beacon among the neutral bars. */
+.week-bar.today .week-bar-label {
+  color: var(--accent-strong);
+}
+.week-bar.today .week-bar-date {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+.week-bar.today.over .week-bar-label,
+.week-bar.today.over .week-bar-date {
+  color: var(--prio-high);
+}
+
+/* "Re-plan" header action — a quiet pill next to Auto-plan. */
+.replan-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }

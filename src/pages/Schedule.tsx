@@ -200,9 +200,6 @@ export default function Schedule() {
             </button>
           </div>
           <div className="schedule-toolbar-actions">
-            <Link to="/add" className="export-button">
-              <Plus size={16} /> Add
-            </Link>
             <button type="button" className="export-button" onClick={handleExport}>
               <CalendarPlus size={16} /> Add to iCalendar
             </button>
@@ -454,7 +451,7 @@ function MonthView({
                   <button
                     type="button"
                     key={occ.occurrenceKey}
-                    className={`month-pill ${occ.kind === 'event' ? 'prio-event' : `prio-${occ.item.priority ?? 'medium'}`}`}
+                    className={`month-pill ${occ.kind === 'event' ? 'prio-event' : 'prio-task'}`}
                     title={occ.item.title}
                     onClick={() => onOpen(occ.item, occ.date, occ.end)}
                   >

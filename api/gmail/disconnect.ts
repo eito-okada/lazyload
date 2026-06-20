@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireUser, serviceClient, HttpError } from "../_supabase";
+import { requireUser, serviceClient, HttpError } from "../_supabase.js";
 
 // Remove the user's stored Gmail credentials (stops all future scanning). The
 // dedup ledger is left in place so reconnecting doesn't re-scan old mail.

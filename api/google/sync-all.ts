@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { serviceClient } from "../_supabase";
-import { reconcileUser } from "../_google";
+import { serviceClient } from "../_supabase.js";
+import { reconcileUser } from "../_google.js";
 
 // Background cron entry: sync every connected user. Guarded by CRON_SECRET so it
 // can't be triggered by the public. Vercel cron sends the secret as a header

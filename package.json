@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "npx vercel dev",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "extract": "tsx scripts/extract.ts",
-    "test:google": "tsx scripts/test-google-sync.ts"
+    "test:google": "tsx scripts/test-google-sync.ts",
+    "test:plan": "tsx scripts/test-plan.ts"
   },
   "dependencies": {
     "@google/genai": "^2.8.0",

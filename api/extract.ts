@@ -5,7 +5,7 @@ import {
   ALLOWED_MEDIA_TYPES,
   MAX_IMAGE_BYTES,
   type MediaType,
-} from "./_extract-core";
+} from "./_extract-core.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {

@@ -8,6 +8,7 @@ import Schedule from './pages/Schedule';
 import Today from './pages/Today';
 import AddItem from './pages/AddItem';
 import Suggestions from './pages/Suggestions';
+import Inbox from './pages/Inbox';
 import Settings from './pages/Settings';
 import { AuthProvider } from './context/AuthContext';
 import { TaskProvider } from './context/TaskContext';
@@ -62,6 +63,14 @@ function App() {
                 element={
                   <RequireAuth>
                     <Suggestions />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/inbox"
+                element={
+                  <RequireAuth>
+                    <Inbox />
                   </RequireAuth>
                 }
               />

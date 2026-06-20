@@ -14,6 +14,8 @@ export interface Task {
   kind?: ItemKind;
   priority?: Priority;
   done?: boolean;
+  /** Free-text notes / description carrying the task's context (e.g. "problems 3–18"). */
+  notes?: string;
   /** Origin of the item; 'local' unless it first appeared on Google Calendar. */
   source?: ItemSource;
 
@@ -23,6 +25,26 @@ export interface Task {
   /** Due time in 24h "HH:MM" form, when the source shows a specific time. */
   dueTime?: string;
   estimatedMinutes?: number;
+  /** How long the task actually took, captured on completion (duration learning). */
+  actualMinutes?: number;
+
+  // --- Planned work session (kind === "task") ---
+  // When you'll actually *do* the task, as decided by the auto-planner — distinct
+  // from the deadline above. The planner owns these; the user only sets the deadline.
+  // Stays LazyLoad-only (never pushed to Google Calendar).
+  /** Work-session day in ISO form, e.g. "2026-06-17". */
+  plannedDate?: string;
+  /** Work-session start in 24h "HH:MM" form. */
+  plannedStart?: string;
+  /** Work-session length in minutes (may be shorter than estimatedMinutes for a split part). */
+  plannedMinutes?: number;
+  /**
+   * When the user tapped "Start" on this task's session, as an ISO datetime. While
+   * set (and not done) the task is *in progress* — actively being worked — so it's
+   * excluded from the "slipped past their time" catch-up nudge. Cleared when the
+   * task is finished or rescheduled to another day.
+   */
+  startedAt?: string;
 
   // --- Event fields (kind === "event") ---
   /** Event start as an ISO datetime string, e.g. "2026-06-17T09:00". */

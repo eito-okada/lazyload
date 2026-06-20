@@ -4,7 +4,9 @@ import {
   itemKind,
   dueBadge,
   eventTimeLabel,
-  PRIORITY_LABEL,
+  parseDue,
+  parsePlanned,
+  relativeLabel,
 } from '../lib/schedule';
 import { format } from 'date-fns';
 
@@ -66,8 +68,16 @@ export default function ItemRow({
 }) {
   const kind = itemKind(item);
   const isEvent = kind === 'event';
-  const priority = item.priority ?? 'medium';
-  const barClass = isEvent ? 'prio-event' : `prio-${priority}`;
+  const barClass = isEvent ? 'prio-event' : 'prio-task';
+
+  // A task has two times: a deadline (when it's due) and an optional planned work
+  // session (when you'll do it). Derive both from the item so the row reads the
+  // same wherever it appears; the detail view always opens on the deadline.
+  const session = !isEvent ? parsePlanned(item) : null;
+  const deadline = !isEvent ? parseDue(item) : null;
+  const openDate = isEvent ? date : deadline;
+  const openEnd = isEvent ? end : null;
+  const showTaskMeta = !isEvent && (!!session || !!deadline);
 
   return (
     <div className={`task-row${item.done ? ' done' : ''}${isEvent ? ' is-event' : ''}`}>
@@ -78,11 +88,11 @@ export default function ItemRow({
           ? {
               role: 'button',
               tabIndex: 0,
-              onClick: () => onOpen(item, date, end),
+              onClick: () => onOpen(item, openDate, openEnd),
               onKeyDown: (e: React.KeyboardEvent) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  onOpen(item, date, end);
+                  onOpen(item, openDate, openEnd);
                 }
               },
             }
@@ -98,10 +108,9 @@ export default function ItemRow({
             </span>
           )}
         </div>
-        {date && (
-          <div className="task-row-meta">
-            {isEvent ? (
-              <>
+        {isEvent
+          ? date && (
+              <div className="task-row-meta">
                 <span className="task-time">
                   <Clock size={13} /> {eventTimeLabel(date, end ?? null, item.allDay)}
                 </span>
@@ -115,21 +124,26 @@ export default function ItemRow({
                     <Repeat size={13} /> Repeats
                   </span>
                 )}
-              </>
-            ) : (
-              <>
-                <span className="task-time">
-                  <Clock size={13} /> {item.dueTime ? format(date, 'h:mm a') : 'All day'}
-                </span>
-                {(() => {
-                  const badge = dueBadge(date);
+              </div>
+            )
+          : showTaskMeta && (
+              <div className="task-row-meta">
+                {session && (
+                  <span className="task-time work-time" title="When you'll work on this">
+                    <Clock size={13} /> Work {relativeLabel(session.start)} · {eventTimeLabel(session.start, session.end)}
+                  </span>
+                )}
+                {!session && deadline && item.dueTime && (
+                  <span className="task-time">
+                    <Clock size={13} /> {format(deadline, 'h:mm a')}
+                  </span>
+                )}
+                {deadline && (() => {
+                  const badge = dueBadge(deadline);
                   return <span className={`task-badge badge-${badge.tone}`}>{badge.text}</span>;
                 })()}
-                <span className={`prio-tag prio-${priority}`}>{PRIORITY_LABEL[priority]}</span>
-              </>
+              </div>
             )}
-          </div>
-        )}
       </div>
       <ItemActions item={item} onToggleDone={onToggleDone} onDelete={onDelete} />
     </div>

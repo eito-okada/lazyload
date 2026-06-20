@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireUser, HttpError } from "../_supabase";
-import { reconcileUser } from "../_google";
+import { requireUser, HttpError } from "../_supabase.js";
+import { reconcileUser } from "../_google.js";
 
 // Two-way sync for the authenticated user now: import Google changes, then push.
 export default async function handler(req: VercelRequest, res: VercelResponse) {

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, parseISO } from 'date-fns';
-import { supabase } from './supabase';
+
+// Imported lazily inside the DB helpers so this module stays import-safe outside
+// the browser (e.g. the pure-planner unit tests in scripts/), where `supabase.ts`
+// would otherwise throw on the missing `import.meta.env` Vite globals.
+const getSupabase = async () => (await import('./supabase')).supabase;
 
 /**
  * A day marked differently from the recurring weekly pattern.
@@ -30,6 +34,13 @@ export interface WorkingHours {
   maxPerDayMinutes: number;
   /** Longest single focus session when splitting a big task across days. */
   sessionMinutes: number;
+  /** Buffer left after each planned session before the next one starts. */
+  breakMinutes: number;
+  /** When splitting, spread sessions across the days up to the deadline rather
+   * than cramming the earliest available days. */
+  spaceSessions: boolean;
+  /** Prefer the earliest free slots of a day for higher-priority work. */
+  deepWorkEarly: boolean;
   /**
    * Per-date exceptions to the weekly `workdays` pattern, keyed by "yyyy-MM-dd":
    * 'off' = a normally-busy day with no work block (e.g. a holiday), 'work' = a
@@ -51,6 +62,9 @@ export const DEFAULT_WORKING_HOURS: WorkingHours = {
   dayEnd: '22:00',
   maxPerDayMinutes: 180,
   sessionMinutes: 90,
+  breakMinutes: 15,
+  spaceSessions: true,
+  deepWorkEarly: true,
   overrides: {},
   dismissedReminders: [],
 };
@@ -92,6 +106,7 @@ export function saveWorkingHours(value: WorkingHours): void {
 }
 
 async function fetchFromDB(): Promise<WorkingHours | null> {
+  const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase
@@ -104,6 +119,7 @@ async function fetchFromDB(): Promise<WorkingHours | null> {
 }
 
 async function upsertToDB(value: WorkingHours): Promise<void> {
+  const supabase = await getSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
   await supabase.from(PREFS_TABLE).upsert({

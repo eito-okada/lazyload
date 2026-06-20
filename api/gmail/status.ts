@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireUser, serviceClient, HttpError } from "../_supabase";
+import { requireUser, serviceClient, HttpError } from "../_supabase.js";
 
 // Report whether the user has connected Gmail, plus last scan info.
 export default async function handler(req: VercelRequest, res: VercelResponse) {

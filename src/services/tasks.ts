@@ -2,8 +2,9 @@ import { supabase } from '../lib/supabase';
 import type { Task, Priority, ItemKind, ItemSource } from '../types/Task';
 
 const COLUMNS =
-  'id, import_id, title, subject, due_date, due_time, estimated_minutes, priority, done, ' +
-  'kind, start_at, end_at, all_day, location, recurrence_rule, source';
+  'id, import_id, title, subject, due_date, due_time, estimated_minutes, ' +
+  'actual_minutes, planned_date, planned_start, planned_minutes, started_at, priority, done, ' +
+  'kind, start_at, end_at, all_day, location, recurrence_rule, source, notes';
 
 interface TaskRow {
   id: string;
@@ -13,6 +14,11 @@ interface TaskRow {
   due_date: string | null;
   due_time: string | null;
   estimated_minutes: number | null;
+  actual_minutes: number | null;
+  planned_date: string | null;
+  planned_start: string | null;
+  planned_minutes: number | null;
+  started_at: string | null;
   priority: Priority;
   done: boolean;
   kind: ItemKind | null;
@@ -22,6 +28,7 @@ interface TaskRow {
   location: string | null;
   recurrence_rule: string | null;
   source: ItemSource | null;
+  notes: string | null;
 }
 
 function rowToTask(row: TaskRow): Task {
@@ -32,6 +39,11 @@ function rowToTask(row: TaskRow): Task {
     dueDate: row.due_date ?? undefined,
     dueTime: row.due_time ?? undefined,
     estimatedMinutes: row.estimated_minutes ?? undefined,
+    actualMinutes: row.actual_minutes ?? undefined,
+    plannedDate: row.planned_date ?? undefined,
+    plannedStart: row.planned_start ?? undefined,
+    plannedMinutes: row.planned_minutes ?? undefined,
+    startedAt: row.started_at ?? undefined,
     priority: row.priority,
     done: row.done,
     kind: row.kind ?? 'task',
@@ -41,6 +53,7 @@ function rowToTask(row: TaskRow): Task {
     location: row.location ?? undefined,
     recurrenceRule: row.recurrence_rule ?? undefined,
     source: row.source ?? 'local',
+    notes: row.notes ?? undefined,
   };
 }
 
@@ -52,6 +65,11 @@ function itemToRow(item: Partial<Task>): Record<string, unknown> {
     due_date: item.dueDate ?? null,
     due_time: item.dueTime ?? null,
     estimated_minutes: item.estimatedMinutes ?? null,
+    actual_minutes: item.actualMinutes ?? null,
+    planned_date: item.plannedDate ?? null,
+    planned_start: item.plannedStart ?? null,
+    planned_minutes: item.plannedMinutes ?? null,
+    started_at: item.startedAt ?? null,
     priority: item.priority ?? 'medium',
     kind: item.kind ?? 'task',
     start_at: item.startAt ?? null,
@@ -59,6 +77,7 @@ function itemToRow(item: Partial<Task>): Record<string, unknown> {
     all_day: item.allDay ?? false,
     location: item.location ?? null,
     recurrence_rule: item.recurrenceRule ?? null,
+    notes: item.notes ?? null,
   };
 }
 
@@ -114,20 +133,38 @@ export async function createItem(userId: string, item: Partial<Task>): Promise<T
 
 export async function updateTask(taskId: string, updates: Partial<Task>): Promise<void> {
   const patch: Record<string, unknown> = {};
+  // Nullable columns: a *present* key clears (or sets) the column, even when its
+  // value is undefined — that's how callers wipe a planned session
+  // (`{ plannedDate: undefined, … }`). Keying off `in` (not `!== undefined`) is
+  // essential: treating an explicit undefined as "skip" makes the patch empty,
+  // and `supabase.update({})` is a silent no-op that never clears the row.
+  const nullable: [keyof Task, string][] = [
+    ['subject', 'subject'],
+    ['dueDate', 'due_date'],
+    ['dueTime', 'due_time'],
+    ['estimatedMinutes', 'estimated_minutes'],
+    ['actualMinutes', 'actual_minutes'],
+    ['plannedDate', 'planned_date'],
+    ['plannedStart', 'planned_start'],
+    ['plannedMinutes', 'planned_minutes'],
+    ['startedAt', 'started_at'],
+    ['startAt', 'start_at'],
+    ['endAt', 'end_at'],
+    ['location', 'location'],
+    ['recurrenceRule', 'recurrence_rule'],
+    ['notes', 'notes'],
+  ];
+  for (const [key, col] of nullable) {
+    if (key in updates) patch[col] = updates[key] ?? null;
+  }
+  // Non-nullable columns: only set when a real value is provided (never null).
   if (updates.title !== undefined) patch.title = updates.title;
-  if (updates.subject !== undefined) patch.subject = updates.subject ?? null;
-  if (updates.dueDate !== undefined) patch.due_date = updates.dueDate ?? null;
-  if (updates.dueTime !== undefined) patch.due_time = updates.dueTime ?? null;
-  if (updates.estimatedMinutes !== undefined) patch.estimated_minutes = updates.estimatedMinutes ?? null;
   if (updates.priority !== undefined) patch.priority = updates.priority;
   if (updates.done !== undefined) patch.done = updates.done;
   if (updates.kind !== undefined) patch.kind = updates.kind;
-  if (updates.startAt !== undefined) patch.start_at = updates.startAt ?? null;
-  if (updates.endAt !== undefined) patch.end_at = updates.endAt ?? null;
   if (updates.allDay !== undefined) patch.all_day = updates.allDay;
-  if (updates.location !== undefined) patch.location = updates.location ?? null;
-  if (updates.recurrenceRule !== undefined) patch.recurrence_rule = updates.recurrenceRule ?? null;
 
+  if (Object.keys(patch).length === 0) return; // nothing to change
   const { error } = await supabase.from('tasks').update(patch).eq('id', taskId);
   if (error) throw error;
 }

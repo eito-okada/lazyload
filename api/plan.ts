@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { ApiError } from "@google/genai";
-import { writePlanText, type PlanItemInput } from "./_plan-core";
+import { writePlanText, type PlanItemInput } from "./_plan-core.js";
 
 const MAX_ITEMS = 50;
 

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireUser, serviceClient, HttpError } from "../_supabase";
+import { requireUser, serviceClient, HttpError } from "../_supabase.js";
 
 // Remove the user's stored Google credentials (stops all future sync).
 export default async function handler(req: VercelRequest, res: VercelResponse) {

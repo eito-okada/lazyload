@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireUser, HttpError } from "../_supabase";
-import { scanUser } from "../_gmail";
+import { requireUser, HttpError } from "../_supabase.js";
+import { scanUser } from "../_gmail.js";
 
 // On-demand "Scan inbox now". Reads the user's recent inbox and creates tasks.
 export default async function handler(req: VercelRequest, res: VercelResponse) {

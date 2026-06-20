@@ -1,4 +1,4 @@
-import { serviceClient } from "./_supabase";
+import { serviceClient } from "./_supabase.js";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

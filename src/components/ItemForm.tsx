@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react';
 import { CheckSquare, CalendarClock } from 'lucide-react';
-import type { Task, ItemKind, Priority } from '../types/Task';
+import type { Task, ItemKind } from '../types/Task';
+
+const EST_PRESETS = [15, 30, 60, 90, 120, 180, 240] as const;
+const EST_LABELS: Record<number, string> = {
+  15: '15 min', 30: '30 min', 60: '1 hr', 90: '1.5 hr',
+  120: '2 hr', 180: '3 hr', 240: '4 hr',
+};
 
 const WEEKDAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'] as const;
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -49,16 +55,34 @@ export default function ItemForm({ initial, submitLabel = 'Save', submitting, on
   const [kind, setKind] = useState<ItemKind>(initial?.kind ?? 'task');
   const [title, setTitle] = useState(initial?.title ?? '');
   const [subject, setSubject] = useState(initial?.subject ?? '');
-  const [priority, setPriority] = useState<Priority>(initial?.priority ?? 'medium');
+
+  // Estimated time: preset minutes or 'other' for freeform
+  const initPreset = EST_PRESETS.includes(initial?.estimatedMinutes as typeof EST_PRESETS[number])
+    ? (initial!.estimatedMinutes as number)
+    : initial?.estimatedMinutes
+    ? 'other' as const
+    : 60;
+  const [estPreset, setEstPreset] = useState<number | 'other'>(initPreset);
+  const [estCustom, setEstCustom] = useState(
+    initial?.estimatedMinutes && !EST_PRESETS.includes(initial.estimatedMinutes as typeof EST_PRESETS[number])
+      ? String(initial.estimatedMinutes)
+      : '',
+  );
+  const resolvedEstMin =
+    estPreset === 'other' ? (parseInt(estCustom, 10) || undefined) : estPreset;
 
   // Task fields
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? '');
   const [dueTime, setDueTime] = useState(initial?.dueTime ?? '');
+  const [notes, setNotes] = useState(initial?.notes ?? '');
 
-  // Event fields
+  // Event fields. Stored datetimes are floating wall-clock and may carry seconds/
+  // offset from the timestamptz round-trip ("…T14:00:00+00:00"); a datetime-local
+  // input wants exactly "YYYY-MM-DDTHH:mm", so trim to those leading characters.
+  const toLocalInput = (s?: string) => (s ? s.slice(0, 16) : '');
   const [allDay, setAllDay] = useState(initial?.allDay ?? false);
-  const [startAt, setStartAt] = useState(initial?.startAt ?? '');
-  const [endAt, setEndAt] = useState(initial?.endAt ?? '');
+  const [startAt, setStartAt] = useState(toLocalInput(initial?.startAt));
+  const [endAt, setEndAt] = useState(toLocalInput(initial?.endAt));
   const [location, setLocation] = useState(initial?.location ?? '');
   const [rec, setRec] = useState<RecurrenceState>(() => parseRrule(initial?.recurrenceRule));
 
@@ -84,9 +108,10 @@ export default function ItemForm({ initial, submitLabel = 'Save', submitting, on
         kind: 'task',
         title: title.trim(),
         subject: subject.trim() || undefined,
-        priority,
+        estimatedMinutes: resolvedEstMin,
         dueDate: dueDate || undefined,
         dueTime: dueTime || undefined,
+        notes: notes.trim() || undefined,
       });
     } else {
       const start = allDay ? `${startDateOnly}T00:00` : startAt;
@@ -95,7 +120,6 @@ export default function ItemForm({ initial, submitLabel = 'Save', submitting, on
         kind: 'event',
         title: title.trim(),
         subject: subject.trim() || undefined,
-        priority,
         allDay,
         startAt: start,
         endAt: end,
@@ -232,14 +256,47 @@ export default function ItemForm({ initial, submitLabel = 'Save', submitting, on
         </>
       )}
 
-      <label className="form-field">
-        <span>Priority</span>
-        <select value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-      </label>
+      {kind === 'task' && (
+        <div className="form-field">
+          <span>Estimated time</span>
+          <div className="est-time-picker">
+            <select
+              value={estPreset}
+              onChange={(e) => setEstPreset(e.target.value === 'other' ? 'other' : Number(e.target.value))}
+            >
+              {EST_PRESETS.map((m) => (
+                <option key={m} value={m}>{EST_LABELS[m]}</option>
+              ))}
+              <option value="other">Other…</option>
+            </select>
+            {estPreset === 'other' && (
+              <input
+                type="number"
+                min={5}
+                max={600}
+                step={5}
+                placeholder="minutes"
+                value={estCustom}
+                onChange={(e) => setEstCustom(e.target.value)}
+                className="est-custom-input"
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {kind === 'task' && (
+        <label className="form-field">
+          <span>Notes</span>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. Problems 3–18, show your work"
+            rows={3}
+            className="form-textarea"
+          />
+        </label>
+      )}
 
       <button type="submit" className="cta-button" disabled={!canSubmit}>
         {submitting ? 'Saving…' : submitLabel}

@@ -6,11 +6,13 @@ import {
   Trash2,
   CheckCircle2,
   Circle,
+  Play,
   Clock,
   MapPin,
   Repeat,
   CalendarDays,
   Tag,
+  FileText,
 } from 'lucide-react';
 import type { Task } from '../types/Task';
 import ItemForm from './ItemForm';
@@ -22,7 +24,6 @@ import {
   eventTimeLabel,
   relativeLabel,
   dueBadge,
-  PRIORITY_LABEL,
 } from '../lib/schedule';
 
 /** Human-readable summary of an RRULE for the detail view. */
@@ -47,6 +48,8 @@ interface ItemDetailProps {
   onUpdate: (id: string, updates: Partial<Task>) => Promise<void>;
   onDelete: (id: string) => void;
   onToggleDone: (item: Task) => void;
+  /** Mark this task's session in progress (optional; tasks only). */
+  onStart?: (item: Task) => void;
 }
 
 /**
@@ -61,6 +64,7 @@ export default function ItemDetail({
   onUpdate,
   onDelete,
   onToggleDone,
+  onStart,
 }: ItemDetailProps) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -76,7 +80,6 @@ export default function ItemDetail({
 
   const kind = itemKind(item);
   const isEvent = kind === 'event';
-  const priority = item.priority ?? 'medium';
 
   // Resolved instants for display: prefer the occurrence the user clicked.
   const start = date ?? (isEvent ? parseStart(item) : parseDue(item));
@@ -136,7 +139,7 @@ export default function ItemDetail({
         ) : (
           <>
             <div className="modal-head">
-              <span className={`detail-kind ${isEvent ? 'is-event' : `prio-${priority}`}`}>
+              <span className={`detail-kind ${isEvent ? 'is-event' : 'prio-task'}`}>
                 {isEvent ? 'Event' : 'Task'}
               </span>
               <h2 className="modal-title">{item.title}</h2>
@@ -200,15 +203,44 @@ export default function ItemDetail({
                 </div>
               )}
 
-              {!isEvent && (
+              {!isEvent && item.estimatedMinutes && (
                 <div className="detail-row">
-                  <span className={`prio-tag prio-${priority}`}>{PRIORITY_LABEL[priority]} priority</span>
-                  {item.estimatedMinutes ? <span className="detail-est">~{item.estimatedMinutes} min</span> : null}
+                  <Clock size={16} />
+                  <span>~{item.estimatedMinutes} min estimated</span>
+                </div>
+              )}
+
+              {!isEvent && item.actualMinutes && (
+                <div className="detail-row">
+                  <Clock size={16} />
+                  <span>
+                    Took ~{item.actualMinutes} min
+                    {item.estimatedMinutes ? ` (estimated ${item.estimatedMinutes})` : ''}
+                  </span>
+                </div>
+              )}
+
+              {!isEvent && item.notes && (
+                <div className="detail-row detail-row-notes">
+                  <FileText size={16} />
+                  <span className="detail-notes">{item.notes}</span>
                 </div>
               )}
             </div>
 
             <div className="modal-actions">
+              {!isEvent && !item.done && !item.startedAt && onStart && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    onStart(item);
+                    onClose();
+                  }}
+                >
+                  <Play size={16} /> Start
+                </button>
+              )}
               {!isEvent && (
                 <button
                   type="button"

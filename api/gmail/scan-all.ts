@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { serviceClient } from "../_supabase";
-import { scanUser } from "../_gmail";
+import { serviceClient } from "../_supabase.js";
+import { scanUser } from "../_gmail.js";
 
 // Background cron entry: scan every Gmail-connected user's inbox. Guarded by
 // CRON_SECRET so it can't be triggered by the public (same pattern as the
