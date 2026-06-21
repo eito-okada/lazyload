@@ -45,6 +45,23 @@ export default function Login() {
           <GoogleIcon /> Continue with Google
         </button>
         <p className="auth-fineprint">No passwords. Your data stays private to you.</p>
+
+        <div className="judge-note">
+          <p className="judge-note-title">👋 For judges</p>
+          <p className="judge-note-body">
+            Click <strong>Continue with Google</strong> and sign in with our demo account:
+          </p>
+          <dl className="judge-creds">
+            <div>
+              <dt>Email</dt>
+              <dd>lazyloadtest@gmail.com</dd>
+            </div>
+            <div>
+              <dt>Password</dt>
+              <dd>LazyLoad0621</dd>
+            </div>
+          </dl>
+        </div>
       </div>
     </section>
   );
